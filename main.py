@@ -2,7 +2,7 @@ import os.path as osp
 from parse_args import parse_args
 import torch
 import torch.nn.functional as F
-from torch_geometric.datasets import Flickr
+from torch_geometric.datasets import Flickr,Reddit
 from torch_geometric.data import GraphSAINTRandomWalkSampler
 from torch_geometric.utils import degree
 import numpy as np
@@ -81,10 +81,13 @@ def eval_sample():
 if __name__ == '__main__':
     args = parse_args()
 
-    if args.dataset == 'Flickr':
+    if args.dataset == 'flickr':
         path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Flickr')
         dataset = Flickr(path)
         print('Dataset:', args.dataset)
+    elif args.dataset == 'reddit':
+        path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Reddit')
+        dataset = Reddit(path)
     else:
         raise KeyError('Dataset name error')
 
