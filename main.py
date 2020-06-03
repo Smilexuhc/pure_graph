@@ -1,5 +1,5 @@
 import os.path as osp
-from parse_args import parse_args
+from parse_args import parse_args, get_log_name
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Flickr, Reddit
@@ -8,6 +8,10 @@ from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
 from logger import LightLogging
+from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
+
+log_path = './logs'
+summary_path = './summary'
 
 
 def train_sample(norm_loss):
@@ -73,14 +77,21 @@ def eval_sample():
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
             accs_batch.append(correct[mask].sum().item() / mask.sum().item())
         accs_all.append(accs_batch)
+    accs_all = np.array(accs_all)
     accs = []
     for i in range(3):
         accs.append(np.mean(accs_all[:, i]))
+    return accs
 
 
 if __name__ == '__main__':
-    logger = LightLogging(log_name='graphsaint')
+
     args = parse_args()
+    log_name = get_log_name(args, prefix='test')
+    if args.save_log == 1:
+        logger = LightLogging(log_path=log_path, log_name=log_name)
+    else:
+        logger = LightLogging(log_name=log_name)
     logger.info('Model setting: {}'.format(args))
 
     if args.dataset == 'flickr':
@@ -103,6 +114,8 @@ if __name__ == '__main__':
                                              num_steps=5, sample_coverage=1000,
                                              save_dir=dataset.processed_dir,
                                              num_workers=0)
+    elif args.sampler == 'rn':
+        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size)
     else:
         raise KeyError('Sampler type error')
     if args.use_gpu == 1:
@@ -130,3 +143,6 @@ if __name__ == '__main__':
         logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
                     f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
         summary_all.append(accs[2])
+    summary_all = np.array(summary_all)
+    summary_path = summary_path + '/' + log_name
+    np.save(summary_path, summary_all)
