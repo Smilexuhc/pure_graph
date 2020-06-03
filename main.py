@@ -4,36 +4,9 @@ import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Flickr
 from torch_geometric.data import GraphSAINTRandomWalkSampler
-from torch_geometric.nn import SAGEConv
 from torch_geometric.utils import degree
 import numpy as np
-
-
-class Net(torch.nn.Module):
-    def __init__(self, hidden_channels):
-        super(Net, self).__init__()
-        in_channels = dataset.num_node_features
-        out_channels = dataset.num_classes
-        self.conv1 = SAGEConv(in_channels, hidden_channels)
-        self.conv2 = SAGEConv(hidden_channels, hidden_channels)
-        self.conv3 = SAGEConv(hidden_channels, hidden_channels)
-        self.lin = torch.nn.Linear(3 * hidden_channels, out_channels)
-
-    def set_aggr(self, aggr):
-        self.conv1.aggr = aggr
-        self.conv2.aggr = aggr
-        self.conv3.aggr = aggr
-
-    def forward(self, x0, edge_index, edge_weight=None):
-        x1 = F.relu(self.conv1(x0, edge_index, edge_weight))
-        x1 = F.dropout(x1, p=0.2, training=self.training)
-        x2 = F.relu(self.conv2(x1, edge_index, edge_weight))
-        x2 = F.dropout(x2, p=0.2, training=self.training)
-        x3 = F.relu(self.conv3(x2, edge_index, edge_weight))
-        x3 = F.dropout(x3, p=0.2, training=self.training)
-        x = torch.cat([x1, x2, x3], dim=-1)
-        x = self.lin(x)
-        return x.log_softmax(dim=-1)
+from .nets import SAGENet
 
 
 def train_sample(norm_loss):
@@ -45,7 +18,7 @@ def train_sample(norm_loss):
         data = data.to(device)
         optimizer.zero_grad()
         out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
-        if norm_loss ==1:
+        if norm_loss == 1:
             loss = F.nll_loss(out, data.y, reduction='none')
             loss = (loss * data.node_norm)[data.train_mask].sum()
         else:
@@ -102,7 +75,7 @@ def eval_sample():
         accs_all.append(accs_batch)
     accs = []
     for i in range(3):
-        accs.append(np.mean(accs_all[:,i]))
+        accs.append(np.mean(accs_all[:, i]))
 
 
 if __name__ == '__main__':
@@ -111,6 +84,9 @@ if __name__ == '__main__':
     if args.dataset == 'Flickr':
         path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Flickr')
         dataset = Flickr(path)
+        print('Dataset:',args.dataset)
+        print('Num of nodes:',dataset[0].shape[0])
+        print('Num of node features:',dataset.num_node_features)
     else:
         raise KeyError('Dataset name error')
 
@@ -119,6 +95,7 @@ if __name__ == '__main__':
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
 
     if args.sampler == 'rw':
+        print('Use GraphSaint randomwalk sampler')
         loader = GraphSAINTRandomWalkSampler(data, batch_size=args.batch_size, walk_length=2,
                                              num_steps=5, sample_coverage=1000,
                                              save_dir=dataset.processed_dir,
@@ -126,9 +103,11 @@ if __name__ == '__main__':
     else:
         raise KeyError('Sampler type error')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(hidden_channels=256).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
+    model = SAGENet(in_channels=dataset.num_node_features,
+                    hidden_channels=256,
+                    out_channels=dataset.num_classes).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     summary_all = []
     for epoch in range(1, 51):
@@ -143,7 +122,4 @@ if __name__ == '__main__':
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
               f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
         summary_all.append(accs[2])
-    print('ALL epoch acc:',summary_all)
-
-
-
+    print('ALL epoch acc:', summary_all)
