@@ -1,5 +1,6 @@
 import torch
 from torch_geometric.nn import SAGEConv
+import torch.nn.functional as F
 
 
 class SAGENet(torch.nn.Module):

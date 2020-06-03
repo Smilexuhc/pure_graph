@@ -1,12 +1,12 @@
 import os.path as osp
-from .parse_args import parse_args
+from parse_args import parse_args
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Flickr
 from torch_geometric.data import GraphSAINTRandomWalkSampler
 from torch_geometric.utils import degree
 import numpy as np
-from .nets import SAGENet
+from nets import SAGENet
 
 
 def train_sample(norm_loss):
@@ -84,9 +84,7 @@ if __name__ == '__main__':
     if args.dataset == 'Flickr':
         path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Flickr')
         dataset = Flickr(path)
-        print('Dataset:',args.dataset)
-        print('Num of nodes:',dataset[0].shape[0])
-        print('Num of node features:',dataset.num_node_features)
+        print('Dataset:', args.dataset)
     else:
         raise KeyError('Dataset name error')
 
@@ -110,9 +108,9 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     summary_all = []
-    for epoch in range(1, 51):
+    for epoch in range(1, args.epochs+1):
         if args.train_sample == 1:
-            loss = train_sample(norm_loss=args.norm_loss)
+            loss = train_sample(norm_loss=args.loss_norm)
         else:
             loss = train_full()
         if args.eval_sample == 1:
