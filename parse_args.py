@@ -12,7 +12,6 @@ def parse_args():
     parser.add_argument('--sampler', type=str, default='rw',choices=['rw','ns','rn'])
     parser.add_argument('--gcn_type',type=str, default='sage',choices=['sage','gat'])
 
-
     args = parser.parse_args()
-    print('Model setting:', args)
+
     return args

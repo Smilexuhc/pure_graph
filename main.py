@@ -7,6 +7,7 @@ from torch_geometric.data import GraphSAINTRandomWalkSampler
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
+from logger import LightLogging
 
 
 def train_sample(norm_loss):
@@ -67,7 +68,6 @@ def eval_sample():
         out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
         pred = out.argmax(dim=-1)
         accs_batch = []
-
         correct = pred.eq(data.y.to(device))
 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
@@ -79,24 +79,26 @@ def eval_sample():
 
 
 if __name__ == '__main__':
+    logger = LightLogging(log_name='graphsaint')
     args = parse_args()
+    logger.info('Model setting: {}'.format(args))
 
     if args.dataset == 'flickr':
         path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Flickr')
         dataset = Flickr(path)
-        print('Dataset:', args.dataset)
     elif args.dataset == 'reddit':
         path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Reddit')
         dataset = Reddit(path)
     else:
         raise KeyError('Dataset name error')
+    logger.info('Dataset: {}'.format(args.dataset))
 
     data = dataset[0]
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
 
     if args.sampler == 'rw':
-        print('Use GraphSaint randomwalk sampler')
+        logger.info('Use GraphSaint randomwalk sampler')
         loader = GraphSAINTRandomWalkSampler(data, batch_size=args.batch_size, walk_length=2,
                                              num_steps=5, sample_coverage=1000,
                                              save_dir=dataset.processed_dir,
@@ -105,6 +107,7 @@ if __name__ == '__main__':
         raise KeyError('Sampler type error')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     Net = {'sage': SAGENet, 'gat': GATNet}.get(args.gcn_type)
+    logger.info('GCN type: {}'.format(args.gcn_type))
     model = Net(in_channels=dataset.num_node_features,
                 hidden_channels=256,
                 out_channels=dataset.num_classes).to(device)
@@ -120,7 +123,6 @@ if __name__ == '__main__':
             accs = eval_sample()
         else:
             accs = eval_full()
-        print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
-              f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
+        logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
+                    f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
         summary_all.append(accs[2])
-    print('ALL epoch acc:', summary_all)
