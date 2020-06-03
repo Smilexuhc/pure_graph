@@ -27,7 +27,7 @@ def train_sample(norm_loss):
             loss = F.nll_loss(out, data.y, reduction='none')
             loss = (loss * data.node_norm)[data.train_mask].sum()
         else:
-            loss = F.nll_loss(out, data.y, reduction='none')[data.train_mask].sum()
+            loss = F.nll_loss(out, data.y, reduction='none')[data.train_mask].mean()
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_nodes
@@ -140,9 +140,13 @@ if __name__ == '__main__':
             accs = eval_sample()
         else:
             accs = eval_full()
-        logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
-                    f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
+        if epoch % args.log_interval == 0:
+            logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
+                        f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
         summary_all.append(accs[2])
     summary_all = np.array(summary_all)
+
+    logger.info('Best acc: {}, epoch: {}'.format(summary_all.max(), summary_all.argmax()))
     summary_path = summary_path + '/' + log_name
     np.save(summary_path, summary_all)
+    logger.info('Save summary to file')
