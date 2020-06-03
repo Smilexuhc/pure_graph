@@ -105,7 +105,11 @@ if __name__ == '__main__':
                                              num_workers=0)
     else:
         raise KeyError('Sampler type error')
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if args.use_gpu == 1:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    else:
+        device = torch.device('cpu')
+
     Net = {'sage': SAGENet, 'gat': GATNet}.get(args.gcn_type)
     logger.info('GCN type: {}'.format(args.gcn_type))
     model = Net(in_channels=dataset.num_node_features,
