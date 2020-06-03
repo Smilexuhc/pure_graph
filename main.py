@@ -2,11 +2,11 @@ import os.path as osp
 from parse_args import parse_args
 import torch
 import torch.nn.functional as F
-from torch_geometric.datasets import Flickr,Reddit
+from torch_geometric.datasets import Flickr, Reddit
 from torch_geometric.data import GraphSAINTRandomWalkSampler
 from torch_geometric.utils import degree
 import numpy as np
-from nets import SAGENet
+from nets import SAGENet, GATNet
 
 
 def train_sample(norm_loss):
@@ -104,14 +104,14 @@ if __name__ == '__main__':
     else:
         raise KeyError('Sampler type error')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    model = SAGENet(in_channels=dataset.num_node_features,
-                    hidden_channels=256,
-                    out_channels=dataset.num_classes).to(device)
+    Net = {'sage': SAGENet, 'gat': GATNet}.get(args.gcn_type)
+    model = Net(in_channels=dataset.num_node_features,
+                hidden_channels=256,
+                out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     summary_all = []
-    for epoch in range(1, args.epochs+1):
+    for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
             loss = train_sample(norm_loss=args.loss_norm)
         else:
