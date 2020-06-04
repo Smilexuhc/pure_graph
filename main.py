@@ -64,7 +64,7 @@ def eval_full():
         accs.append(correct[mask].sum().item() / mask.sum().item())
 
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        f1_scores.append(f1_score(data.y.to(device).numpy(), pred.numpy(), average='macro'))
+        f1_scores.append(f1_score(data.y.cpu().numpy(), pred.cpu().numpy(), average='macro'))
     return accs, f1_scores
 
 
@@ -75,7 +75,7 @@ def eval_sample(norm_loss):
     accs_all = []
     f1_scores_all = []
     for data in loader:
-        print(len(data))
+
         data = data.to(device)
         if norm_loss == 1:
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
@@ -91,7 +91,7 @@ def eval_sample(norm_loss):
         accs_all.append(accs_batch)
 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-            f1_scores_batch.append(f1_score(data.y.to(device).numpy(), pred.numpy(), average='macro'))
+            f1_scores_batch.append(f1_score(data.y.cpu().numpy(), pred.cpu().numpy(), average='macro'))
         f1_scores_all.append(f1_scores_batch)
 
     accs_all = np.array(accs_all)
@@ -159,13 +159,13 @@ if __name__ == '__main__':
         else:
             loss = train_full()
         if args.eval_sample == 1:
-            accs, f1_scores = eval_sample()
+            accs, f1_scores = eval_sample(norm_loss=args.loss_norm)
         else:
             accs, f1_scores = eval_full()
         if epoch % args.log_interval == 0:
             logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f};'
-                        f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f};'
-                        f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
+                        f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f}; '
+                        # f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
                         f'Test-acc: {accs[2]:.4f}, Test-f1: {f1_scores[2]:.4f};')
         summary_accs.append(accs[2])
         summary_f1s.append(f1_scores[2])
