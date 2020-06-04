@@ -65,7 +65,7 @@ def eval_full():
 
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         f1_scores.append(f1_score(data.y.to(device).numpy(), pred.numpy(), average='macro'))
-    return accs,f1_scores
+    return accs, f1_scores
 
 
 @torch.no_grad()
@@ -101,7 +101,7 @@ def eval_sample(norm_loss):
     for i in range(3):
         accs.append(np.mean(accs_all[:, i]))
         f1_scores.append(np.mean(f1_scores_all[:, i]))
-    return accs,f1_scores
+    return accs, f1_scores
 
 
 if __name__ == '__main__':
@@ -151,26 +151,32 @@ if __name__ == '__main__':
                 out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    summary_all = []
+    summary_accs = []
+    summary_f1s = []
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
             loss = train_sample(norm_loss=args.loss_norm)
         else:
             loss = train_full()
         if args.eval_sample == 1:
-            accs,f1_scores = eval_sample()
+            accs, f1_scores = eval_sample()
         else:
-            accs,f1_scores = eval_full()
+            accs, f1_scores = eval_full()
         if epoch % args.log_interval == 0:
             logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f};'
                         f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f};'
                         f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
                         f'Test-acc: {accs[2]:.4f}, Test-f1: {f1_scores[2]:.4f};')
-        summary_all.append(accs[2])
-    summary_all = np.array(summary_all)
+        summary_accs.append(accs[2])
+        summary_f1s.append(f1_scores[2])
+    summary_accs = np.array(summary_accs)
+    summary_f1s = np.array(summary_f1s)
 
-    logger.info('Best acc: {}, epoch: {}'.format(summary_all.max(), summary_all.argmax()))
-    summary_path = summary_path + '/' + log_name
-    np.save(summary_path, summary_all)
+    logger.info('Best acc: {}, epoch: {}, f1-macro: {}'.format(summary_accs.max(), summary_accs.argmax(),
+                                                               summary_f1s[summary_accs.argmax()]))
+    logger.info('Best f1-macro: {}, epoch: {}, acc: {}'.format(summary_f1s.max(), summary_f1s.argmax(),
+                                                               summary_accs[summary_f1s.argmax()]))
+    summary_path = summary_path + '/' + log_name + '.npz'
+    np.savez(summary_path, acc=summary_accs, f1_macro=summary_f1s)
     logger.info('Save summary to file')
     logger.info('Save logs to file')
