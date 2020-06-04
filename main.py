@@ -3,7 +3,7 @@ from parse_args import parse_args, get_log_name
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Flickr, Reddit
-from torch_geometric.data import GraphSAINTRandomWalkSampler
+from torch_geometric.data import GraphSAINTRandomWalkSampler,NeighborSampler
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
@@ -22,11 +22,12 @@ def train_sample(norm_loss):
     for data in loader:
         data = data.to(device)
         optimizer.zero_grad()
-        out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
         if norm_loss == 1:
+            out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
             loss = F.nll_loss(out, data.y, reduction='none')
             loss = (loss * data.node_norm)[data.train_mask].sum()
         else:
+            out = model(data.x,data.edge_index)
             loss = F.nll_loss(out, data.y, reduction='none')[data.train_mask].mean()
         loss.backward()
         optimizer.step()
@@ -76,6 +77,7 @@ def eval_sample():
 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
             accs_batch.append(correct[mask].sum().item() / mask.sum().item())
+
         accs_all.append(accs_batch)
     accs_all = np.array(accs_all)
     accs = []
@@ -115,7 +117,8 @@ if __name__ == '__main__':
                                              save_dir=dataset.processed_dir,
                                              num_workers=0)
     elif args.sampler == 'rn':
-        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size)
+        logger.info('Use random node sampler')
+        loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size)
     else:
         raise KeyError('Sampler type error')
     if args.use_gpu == 1:
@@ -150,3 +153,6 @@ if __name__ == '__main__':
     summary_path = summary_path + '/' + log_name
     np.save(summary_path, summary_all)
     logger.info('Save summary to file')
+    logger.info('Save logs to file')
+
+

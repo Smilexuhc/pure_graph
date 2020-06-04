@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 
 class SAGENet(torch.nn.Module):
+
     def __init__(self, in_channels,hidden_channels,out_channels):
         super(SAGENet, self).__init__()
         self.conv1 = SAGEConv(in_channels, hidden_channels)
@@ -29,6 +30,7 @@ class SAGENet(torch.nn.Module):
 
 
 class GATNet(torch.nn.Module):
+
     def __init__(self, in_channels,hidden_channels,out_channels):
         super(GATNet, self).__init__()
         self.conv1 = GATConv(in_channels, hidden_channels)
