@@ -10,6 +10,8 @@ from nets import SAGENet, GATNet
 from logger import LightLogging
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 from sklearn.metrics import f1_score
+import tensorboardX
+
 
 log_path = './logs'
 summary_path = './summary'
@@ -178,7 +180,8 @@ if __name__ == '__main__':
     summary_accs_test = np.array(summary_accs_test)
     summary_f1s_train = np.array(summary_f1s_train)
     summary_f1s_test = np.array(summary_f1s_test)
-
+    logger.info('Experiment Results:')
+    logger.info('Experiment setting: {}'.format(log_name))
     logger.info('Best acc: {}, epoch: {}, f1-macro: {}'.format(summary_accs_test.max(), summary_accs_test.argmax(),
                                                                summary_f1s_test[summary_accs_test.argmax()]))
     logger.info('Best f1-macro: {}, epoch: {}, acc: {}'.format(summary_f1s_test.max(), summary_f1s_test.argmax(),
