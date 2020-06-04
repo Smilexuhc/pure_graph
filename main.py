@@ -3,12 +3,13 @@ from parse_args import parse_args, get_log_name
 import torch
 import torch.nn.functional as F
 from torch_geometric.datasets import Flickr, Reddit
-from torch_geometric.data import GraphSAINTRandomWalkSampler,NeighborSampler
+from torch_geometric.data import GraphSAINTRandomWalkSampler, NeighborSampler
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
 from logger import LightLogging
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
+from sklearn.metrics import f1_score
 
 log_path = './logs'
 summary_path = './summary'
@@ -27,7 +28,7 @@ def train_sample(norm_loss):
             loss = F.nll_loss(out, data.y, reduction='none')
             loss = (loss * data.node_norm)[data.train_mask].sum()
         else:
-            out = model(data.x,data.edge_index)
+            out = model(data.x, data.edge_index)
             loss = F.nll_loss(out, data.y, reduction='none')[data.train_mask].mean()
         loss.backward()
         optimizer.step()
@@ -58,32 +59,49 @@ def eval_full():
     correct = pred.eq(data.y.to(device))
 
     accs = []
+    f1_scores = []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         accs.append(correct[mask].sum().item() / mask.sum().item())
-    return accs
+
+    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+        f1_scores.append(f1_score(data.y.to(device).numpy(), pred.numpy(), average='macro'))
+    return accs,f1_scores
 
 
 @torch.no_grad()
-def eval_sample():
+def eval_sample(norm_loss):
     model.eval()
     model.set_aggr('add')
     accs_all = []
+    f1_scores_all = []
     for data in loader:
+        print(len(data))
         data = data.to(device)
-        out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
+        if norm_loss == 1:
+            out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
+        else:
+            out = model(data.x, data.edge_index)
         pred = out.argmax(dim=-1)
         accs_batch = []
+        f1_scores_batch = []
         correct = pred.eq(data.y.to(device))
 
         for _, mask in data('train_mask', 'val_mask', 'test_mask'):
             accs_batch.append(correct[mask].sum().item() / mask.sum().item())
-
         accs_all.append(accs_batch)
+
+        for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+            f1_scores_batch.append(f1_score(data.y.to(device).numpy(), pred.numpy(), average='macro'))
+        f1_scores_all.append(f1_scores_batch)
+
     accs_all = np.array(accs_all)
+    f1_scores_all = np.array(f1_scores_all)
     accs = []
+    f1_scores = []
     for i in range(3):
         accs.append(np.mean(accs_all[:, i]))
-    return accs
+        f1_scores.append(np.mean(f1_scores_all[:, i]))
+    return accs,f1_scores
 
 
 if __name__ == '__main__':
@@ -140,12 +158,14 @@ if __name__ == '__main__':
         else:
             loss = train_full()
         if args.eval_sample == 1:
-            accs = eval_sample()
+            accs,f1_scores = eval_sample()
         else:
-            accs = eval_full()
+            accs,f1_scores = eval_full()
         if epoch % args.log_interval == 0:
-            logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train: {accs[0]:.4f}, '
-                        f'Val: {accs[1]:.4f}, Test: {accs[2]:.4f}')
+            logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f};'
+                        f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f};'
+                        f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
+                        f'Test-acc: {accs[2]:.4f}, Test-f1: {f1_scores[2]:.4f};')
         summary_all.append(accs[2])
     summary_all = np.array(summary_all)
 
@@ -154,5 +174,3 @@ if __name__ == '__main__':
     np.save(summary_path, summary_all)
     logger.info('Save summary to file')
     logger.info('Save logs to file')
-
-
