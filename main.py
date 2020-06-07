@@ -95,21 +95,13 @@ def eval_sample(norm_loss):
         res_df_list.append(res_batch)
 
     res_df = pd.concat(res_df_list, axis=0)
+    res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x['pred']))).reset_index()
+    res_df.columns = ['nid', 'pred']
+    res_df = res_df.merge('node_df', on=['nid'], how='left')
 
-    def func(x):
-        if x in train_nid:
-            return 'train'
-        elif x in val_nid:
-            return 'val'
-        elif x in test_nid:
-            return 'test'
-        else:
-            raise ValueError()
-
-    res_df['mask'] = res_df['nid'].apply(lambda x: func(x))
-
-    score_df = res_df.groupby(['mask']).apply(lambda x:accuracy_score(data.y.cpu().numpy(),x['pred']))
-
+    accs = res_df.groupby(['mask']).apply(lambda x:accuracy_score(x['y'], x['pred'])).
+    f1_scores = res_df.groupby(['mask']).apply(lambda x:f1_score(x['y'], x['pred'],average='micro')).
+    
     return accs, f1_scores
 
 
@@ -132,14 +124,14 @@ if __name__ == '__main__':
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
     data.indices = torch.arange(0, data.num_nodes).int()
 
-    # todo add it in dataset
-    train_nid = data.indices[data.train_mask].cpu().numpy()
-    val_nid = data.indices[data.val_mask].cpu().numpy()
-    test_nid = data.indices[data.test_mask].cpu().numpy()
-    train_y = data.y[data.train_mask].cpu().numpy()
-    val_y = data.y[data.val_mask].cpu().numpy()
-    test_y =data.y[data.test_mask].cpu().numpy()
-
+    # todo add it into dataset or rewrite it in easy way
+    node_df = pd.DataFrame()
+    node_df['nid'] = range(data.num_nodes)
+    node_df['y'] = data.y.cpu().numpy()
+    node_df['mask'] = -1
+    node_df['mask'][data.train_mask] = 0
+    node_df['mask'][data.val_mask] = 1
+    node_df['mask'][data.val_mask] = 2
 
     if args.sampler == 'rw':
         logger.info('Use GraphSaint randomwalk sampler')
@@ -165,7 +157,7 @@ if __name__ == '__main__':
                 out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    # replace by tensorboard
+    # todo replace by tensorboard
     summary_accs_train = []
     summary_accs_test = []
     summary_f1s_train = []
