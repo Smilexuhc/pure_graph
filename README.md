@@ -15,7 +15,7 @@ Dataset support:
 4. PPI
 
 
-TODO:
+TODO 06-07:
 1. Tensorboard for visualization
 2. More sampler and more gcn net.
 3. Rewrite dataset

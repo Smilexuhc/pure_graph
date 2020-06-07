@@ -9,10 +9,10 @@ import numpy as np
 from nets import SAGENet, GATNet
 from logger import LightLogging
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 import tensorboardX
 from utlis import load_dataset
-
+import pandas as pd
 
 log_path = './logs'
 summary_path = './summary'
@@ -28,6 +28,7 @@ def train_sample(norm_loss):
         optimizer.zero_grad()
         if norm_loss == 1:
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
+
             loss = F.nll_loss(out, data.y, reduction='none')
             loss = (loss * data.node_norm)[data.train_mask].sum()
         else:
@@ -67,7 +68,7 @@ def eval_full():
         accs.append(correct[mask].sum().item() / mask.sum().item())
 
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        f1_scores.append(f1_score(data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), average='macro'))
+        f1_scores.append(f1_score(data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), average='micro'))
     return accs, f1_scores
 
 
@@ -75,35 +76,40 @@ def eval_full():
 def eval_sample(norm_loss):
     model.eval()
     model.set_aggr('add')
-    accs_all = []
-    f1_scores_all = []
+
+    res_df_list = []
     for data in loader:
 
         data = data.to(device)
+
         if norm_loss == 1:
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
         else:
             out = model(data.x, data.edge_index)
         pred = out.argmax(dim=-1)
-        accs_batch = []
-        f1_scores_batch = []
         correct = pred.eq(data.y.to(device))
 
-        for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-            accs_batch.append(correct[mask].sum().item() / mask.sum().item())
-        accs_all.append(accs_batch)
+        res_batch = pd.DataFrame()
+        res_batch['nid'] = data.indices
+        res_batch['pred'] = pred
+        res_df_list.append(res_batch)
 
-        for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-            f1_scores_batch.append(f1_score(data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), average='macro'))
-        f1_scores_all.append(f1_scores_batch)
+    res_df = pd.concat(res_df_list, axis=0)
 
-    accs_all = np.array(accs_all)
-    f1_scores_all = np.array(f1_scores_all)
-    accs = []
-    f1_scores = []
-    for i in range(3):
-        accs.append(np.mean(accs_all[:, i]))
-        f1_scores.append(np.mean(f1_scores_all[:, i]))
+    def func(x):
+        if x in train_nid:
+            return 'train'
+        elif x in val_nid:
+            return 'val'
+        elif x in test_nid:
+            return 'test'
+        else:
+            raise ValueError()
+
+    res_df['mask'] = res_df['nid'].apply(lambda x: func(x))
+
+    score_df = res_df.groupby(['mask']).apply(lambda x:accuracy_score(data.y.cpu().numpy(),x['pred']))
+
     return accs, f1_scores
 
 
@@ -124,6 +130,16 @@ if __name__ == '__main__':
     data = dataset[0]
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
+    data.indices = torch.arange(0, data.num_nodes).int()
+
+    # todo add it in dataset
+    train_nid = data.indices[data.train_mask].cpu().numpy()
+    val_nid = data.indices[data.val_mask].cpu().numpy()
+    test_nid = data.indices[data.test_mask].cpu().numpy()
+    train_y = data.y[data.train_mask].cpu().numpy()
+    val_y = data.y[data.val_mask].cpu().numpy()
+    test_y =data.y[data.test_mask].cpu().numpy()
+
 
     if args.sampler == 'rw':
         logger.info('Use GraphSaint randomwalk sampler')
@@ -136,6 +152,7 @@ if __name__ == '__main__':
         loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size)
     else:
         raise KeyError('Sampler type error')
+
     if args.use_gpu == 1:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     else:
@@ -148,6 +165,7 @@ if __name__ == '__main__':
                 out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
+    # replace by tensorboard
     summary_accs_train = []
     summary_accs_test = []
     summary_f1s_train = []
@@ -177,12 +195,12 @@ if __name__ == '__main__':
     summary_f1s_test = np.array(summary_f1s_test)
     logger.info('Experiment Results:')
     logger.info('Experiment setting: {}'.format(log_name))
-    logger.info('Best acc: {}, epoch: {}, f1-macro: {}'.format(summary_accs_test.max(), summary_accs_test.argmax(),
+    logger.info('Best acc: {}, epoch: {}, f1-micro: {}'.format(summary_accs_test.max(), summary_accs_test.argmax(),
                                                                summary_f1s_test[summary_accs_test.argmax()]))
-    logger.info('Best f1-macro: {}, epoch: {}, acc: {}'.format(summary_f1s_test.max(), summary_f1s_test.argmax(),
+    logger.info('Best f1-micro: {}, epoch: {}, acc: {}'.format(summary_f1s_test.max(), summary_f1s_test.argmax(),
                                                                summary_accs_test[summary_f1s_test.argmax()]))
     summary_path = summary_path + '/' + log_name + '.npz'
-    np.savez(summary_path, train_acc=summary_accs_train,test_acc=summary_accs_test,
-             train_f1=summary_f1s_train,test_f1=summary_f1s_test)
+    np.savez(summary_path, train_acc=summary_accs_train, test_acc=summary_accs_test,
+             train_f1=summary_f1s_train, test_f1=summary_f1s_test)
     logger.info('Save summary to file')
     logger.info('Save logs to file')

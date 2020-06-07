@@ -7,7 +7,7 @@ def load_dataset(dataset='flickr'):
 
     Args:
         dataset: str, name of dataset, assuming the raw dataset path is ./data/your_dataset/raw.
-                 torch_geometric.dataset will automatically preprocess the raw files and store preprocess dataset into
+                 torch_geometric.dataset will automatically preprocess the raw files and save preprocess dataset into
                  ./data/your_dataset/preprocess
 
     Returns:

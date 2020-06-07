@@ -1,0 +1,11 @@
+flickr:
+  hidden_units:
+  dropout_rate:
+  learning_rate:
+
+reddit:
+  hidden_units:
+  dropout_rates:
+  learning_rate:
+
+ppi:
