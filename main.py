@@ -11,6 +11,7 @@ from logger import LightLogging
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 from sklearn.metrics import f1_score
 import tensorboardX
+from utlis import load_dataset
 
 
 log_path = './logs'
@@ -110,20 +111,14 @@ if __name__ == '__main__':
 
     args = parse_args()
     log_name = get_log_name(args, prefix='test')
+
     if args.save_log == 1:
         logger = LightLogging(log_path=log_path, log_name=log_name)
     else:
         logger = LightLogging(log_name=log_name)
     logger.info('Model setting: {}'.format(args))
 
-    if args.dataset == 'flickr':
-        path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Flickr')
-        dataset = Flickr(path)
-    elif args.dataset == 'reddit':
-        path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', 'Reddit')
-        dataset = Reddit(path)
-    else:
-        raise KeyError('Dataset name error')
+    dataset = load_dataset(args.dataset)
     logger.info('Dataset: {}'.format(args.dataset))
 
     data = dataset[0]
