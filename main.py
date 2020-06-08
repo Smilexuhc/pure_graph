@@ -99,9 +99,16 @@ def eval_sample(norm_loss):
     res_df.columns = ['nid', 'pred']
     res_df = res_df.merge('node_df', on=['nid'], how='left')
 
-    accs = res_df.groupby(['mask']).apply(lambda x:accuracy_score(x['y'], x['pred'])).
-    f1_scores = res_df.groupby(['mask']).apply(lambda x:f1_score(x['y'], x['pred'],average='micro')).
-    
+    accs = res_df.groupby(['mask']).apply(lambda x:accuracy_score(x['y'], x['pred'])).reset_index()
+    accs.columns = ['mask','acc']
+    accs = accs.sort_values(by=['mask'],ascending=True)
+
+    f1_scores = res_df.groupby(['mask']).apply(lambda x:f1_score(x['y'], x['pred'],average='micro')).reset_index()
+    f1_scores.columns = ['mask', 'f1']
+    f1_scores = f1_scores.sort_values(by=['mask'],ascending=True)
+
+    accs = list(accs['acc'])
+    f1_scores = list(f1_scores['f1'])
     return accs, f1_scores
 
 
