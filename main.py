@@ -87,7 +87,7 @@ def eval_sample(norm_loss):
         else:
             out = model(data.x, data.edge_index)
         pred = out.argmax(dim=-1)
-        correct = pred.eq(data.y.to(device))
+        # correct = pred.eq(data.y.to(device))
 
         res_batch = pd.DataFrame()
         res_batch['nid'] = data.indices
@@ -99,13 +99,13 @@ def eval_sample(norm_loss):
     res_df.columns = ['nid', 'pred']
     res_df = res_df.merge('node_df', on=['nid'], how='left')
 
-    accs = res_df.groupby(['mask']).apply(lambda x:accuracy_score(x['y'], x['pred'])).reset_index()
-    accs.columns = ['mask','acc']
-    accs = accs.sort_values(by=['mask'],ascending=True)
+    accs = res_df.groupby(['mask']).apply(lambda x: accuracy_score(x['y'], x['pred'])).reset_index()
+    accs.columns = ['mask', 'acc']
+    accs = accs.sort_values(by=['mask'], ascending=True)
 
-    f1_scores = res_df.groupby(['mask']).apply(lambda x:f1_score(x['y'], x['pred'],average='micro')).reset_index()
+    f1_scores = res_df.groupby(['mask']).apply(lambda x: f1_score(x['y'], x['pred'], average='micro')).reset_index()
     f1_scores.columns = ['mask', 'f1']
-    f1_scores = f1_scores.sort_values(by=['mask'],ascending=True)
+    f1_scores = f1_scores.sort_values(by=['mask'], ascending=True)
 
     accs = list(accs['acc'])
     f1_scores = list(f1_scores['f1'])
@@ -136,9 +136,21 @@ if __name__ == '__main__':
     node_df['nid'] = range(data.num_nodes)
     node_df['y'] = data.y.cpu().numpy()
     node_df['mask'] = -1
-    node_df['mask'][data.train_mask] = 0
-    node_df['mask'][data.val_mask] = 1
-    node_df['mask'][data.val_mask] = 2
+
+    train_nid = data.indices[data.train_mask].numpy()
+    test_nid = data.indices[data.test_mask].numpy()
+    val_nid = data.indices[data.val_mask].numpy()
+
+    def func(x):
+        if x in train_nid:
+            return 0
+        elif x in val_nid:
+            return 1
+        elif x in test_nid:
+            return 2
+        else:
+            return -1
+    node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
     if args.sampler == 'rw':
         logger.info('Use GraphSaint randomwalk sampler')
