@@ -2,7 +2,7 @@ from parse_args import parse_args, get_log_name
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
-    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
+    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
 
 from torch_geometric.utils import degree
 import numpy as np
@@ -156,12 +156,15 @@ if __name__ == '__main__':
         loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size)
     elif args.sampler == 'node':
         logger.info('Use GraphSaint node sampler')
-        loader = GraphSAINTNodeSampler(data,batch_size=args.batch_size)
+        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size)
 
     elif args.sampler == 'edge':
         logger.info('Use GraphSaint edge sampler')
-        loader = GraphSAINTEdgeSampler(data,batch_size=args.batch_size)
-
+        loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size)
+    elif args.sampler == 'cluster':
+        logger.info('Use cluster sampler')
+        cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=dataset.processed_dir)
+        raise NotImplementedError('Cluster loader not implement yet')
     else:
         raise KeyError('Sampler type error')
 
@@ -191,7 +194,6 @@ if __name__ == '__main__':
         else:
             accs = eval_full()
         if epoch % args.log_interval == 0:
-
             logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train-acc: {accs[0]:.4f}, '
                         f'Val-acc: {accs[1]:.4f}, Test-acc: {accs[2]:.4f}')
 
