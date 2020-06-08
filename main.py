@@ -87,17 +87,17 @@ def eval_sample(norm_loss):
         else:
             out = model(data.x, data.edge_index)
         pred = out.argmax(dim=-1)
-        # correct = pred.eq(data.y.to(device))
+        correct = pred.eq(data.y.to(device))
 
         res_batch = pd.DataFrame()
-        res_batch['nid'] = data.indices
-        res_batch['pred'] = pred
+        res_batch['nid'] = data.indices.cpu().numpy()
+        res_batch['pred'] = pred.cpu().numpy()
         res_df_list.append(res_batch)
 
-    res_df = pd.concat(res_df_list, axis=0)
-    res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x['pred']))).reset_index()
+    res_df = pd.concat(res_df_list)
+    res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x))).reset_index()
     res_df.columns = ['nid', 'pred']
-    res_df = res_df.merge('node_df', on=['nid'], how='left')
+    res_df = res_df.merge(node_df, on=['nid'], how='left')
 
     accs = res_df.groupby(['mask']).apply(lambda x: accuracy_score(x['y'], x['pred'])).reset_index()
     accs.columns = ['mask', 'acc']
@@ -107,8 +107,9 @@ def eval_sample(norm_loss):
     f1_scores.columns = ['mask', 'f1']
     f1_scores = f1_scores.sort_values(by=['mask'], ascending=True)
 
-    accs = list(accs['acc'])
-    f1_scores = list(f1_scores['f1'])
+    accs = accs['acc'].values
+    f1_scores = f1_scores['f1'].values
+
     return accs, f1_scores
 
 
@@ -130,16 +131,15 @@ if __name__ == '__main__':
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
     data.indices = torch.arange(0, data.num_nodes).int()
-
     # todo add it into dataset or rewrite it in easy way
     node_df = pd.DataFrame()
     node_df['nid'] = range(data.num_nodes)
     node_df['y'] = data.y.cpu().numpy()
     node_df['mask'] = -1
-
     train_nid = data.indices[data.train_mask].numpy()
     test_nid = data.indices[data.test_mask].numpy()
     val_nid = data.indices[data.val_mask].numpy()
+
 
     def func(x):
         if x in train_nid:
@@ -150,6 +150,8 @@ if __name__ == '__main__':
             return 2
         else:
             return -1
+
+
     node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
     if args.sampler == 'rw':
@@ -195,6 +197,7 @@ if __name__ == '__main__':
                         f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f}; '
                         # f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
                         f'Test-acc: {accs[2]:.4f}, Test-f1: {f1_scores[2]:.4f};')
+
         summary_accs_train.append(accs[0])
         summary_f1s_train.append(f1_scores[0])
         summary_accs_test.append(accs[2])
