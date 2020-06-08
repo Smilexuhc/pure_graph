@@ -1,5 +1,8 @@
 import os.path as osp
 from torch_geometric.datasets import Flickr,Reddit,PPI,Yelp
+from torch_geometric.data import GraphSAINTRandomWalkSampler, \
+    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
+from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 
 
 def load_dataset(dataset='flickr'):
@@ -30,6 +33,8 @@ def load_dataset(dataset='flickr'):
         raise KeyError('Dataset name error')
 
     return dataset
+
+
 
 
 

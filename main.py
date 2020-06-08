@@ -1,15 +1,15 @@
-import os.path as osp
 from parse_args import parse_args, get_log_name
 import torch
 import torch.nn.functional as F
-from torch_geometric.datasets import Flickr, Reddit
-from torch_geometric.data import GraphSAINTRandomWalkSampler, NeighborSampler
+from torch_geometric.data import GraphSAINTRandomWalkSampler, \
+    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
+
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
 from logger import LightLogging
-from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
-from sklearn.metrics import f1_score, accuracy_score
+from sampler import MySAINTSampler
+from sklearn.metrics import accuracy_score
 import tensorboardX
 from utlis import load_dataset
 import pandas as pd
@@ -63,13 +63,9 @@ def eval_full():
     correct = pred.eq(data.y.to(device))
 
     accs = []
-    f1_scores = []
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         accs.append(correct[mask].sum().item() / mask.sum().item())
 
-    # for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-    #     f1_scores.append(f1_score(data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), average='micro'))
-    # return accs, f1_scores
     return accs
 
 
@@ -88,7 +84,6 @@ def eval_sample(norm_loss):
         else:
             out = model(data.x, data.edge_index)
         pred = out.argmax(dim=-1)
-        correct = pred.eq(data.y.to(device))
 
         res_batch = pd.DataFrame()
         res_batch['nid'] = data.indices.cpu().numpy()
@@ -103,15 +98,8 @@ def eval_sample(norm_loss):
     accs = res_df.groupby(['mask']).apply(lambda x: accuracy_score(x['y'], x['pred'])).reset_index()
     accs.columns = ['mask', 'acc']
     accs = accs.sort_values(by=['mask'], ascending=True)
+    accs = accs['acc'].values
 
-    # f1_scores = res_df.groupby(['mask']).apply(lambda x: f1_score(x['y'], x['pred'], average='micro')).reset_index()
-    # f1_scores.columns = ['mask', 'f1']
-    # f1_scores = f1_scores.sort_values(by=['mask'], ascending=True)
-    #
-    # accs = accs['acc'].values
-    # f1_scores = f1_scores['f1'].values
-
-    # return accs, f1_scores
     return accs
 
 
@@ -133,6 +121,7 @@ if __name__ == '__main__':
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
     data.indices = torch.arange(0, data.num_nodes).int()
+
     # todo add it into dataset or rewrite it in easy way
     node_df = pd.DataFrame()
     node_df['nid'] = range(data.num_nodes)
@@ -165,6 +154,14 @@ if __name__ == '__main__':
     elif args.sampler == 'rn':
         logger.info('Use random node sampler')
         loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size)
+    elif args.sampler == 'node':
+        logger.info('Use GraphSaint node sampler')
+        loader = GraphSAINTNodeSampler(data,batch_size=args.batch_size)
+
+    elif args.sampler == 'edge':
+        logger.info('Use GraphSaint edge sampler')
+        loader = GraphSAINTEdgeSampler(data,batch_size=args.batch_size)
+
     else:
         raise KeyError('Sampler type error')
 
@@ -183,43 +180,33 @@ if __name__ == '__main__':
     # todo replace by tensorboard
     summary_accs_train = []
     summary_accs_test = []
-    # summary_f1s_train = []
-    # summary_f1s_test = []
+
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
             loss = train_sample(norm_loss=args.loss_norm)
         else:
             loss = train_full()
         if args.eval_sample == 1:
-            accs, f1_scores = eval_sample(norm_loss=args.loss_norm)
+            accs = eval_sample(norm_loss=args.loss_norm)
         else:
-            accs, f1_scores = eval_full()
+            accs = eval_full()
         if epoch % args.log_interval == 0:
-            # logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f};'
-            #             f'Train-acc: {accs[0]:.4f}, Train-f1: {f1_scores[0]:.4f}; '
-            #             # f'Val-acc: {accs[1]:.4f}, Val-f1: {f1_scores[1]:.4f};'
-            #             f'Test-acc: {accs[2]:.4f}, Test-f1: {f1_scores[2]:.4f};')
+
             logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train-acc: {accs[0]:.4f}, '
                         f'Val-acc: {accs[1]:.4f}, Test-acc: {accs[2]:.4f}')
 
         summary_accs_train.append(accs[0])
 
         summary_accs_test.append(accs[2])
-        # summary_f1s_train.append(f1_scores[0])
-        # summary_f1s_test.append(f1_scores[2])
 
     summary_accs_train = np.array(summary_accs_train)
     summary_accs_test = np.array(summary_accs_test)
-    # summary_f1s_train = np.array(summary_f1s_train)
-    # summary_f1s_test = np.array(summary_f1s_test)
+
     logger.info('Experiment Results:')
     logger.info('Experiment setting: {}'.format(log_name))
     logger.info('Best acc: {}, epoch: {}'.format(summary_accs_test.max(), summary_accs_test.argmax()))
-    # logger.info('Best f1-micro: {}, epoch: {}, acc: {}'.format(summary_f1s_test.max(), summary_f1s_test.argmax(),
-    #                                                            summary_accs_test[summary_f1s_test.argmax()]))
+
     summary_path = summary_path + '/' + log_name + '.npz'
-    # np.savez(summary_path, train_acc=summary_accs_train, test_acc=summary_accs_test,
-    #          train_f1=summary_f1s_train, test_f1=summary_f1s_test)
     np.savez(summary_path, train_acc=summary_accs_train, test_acc=summary_accs_test)
     logger.info('Save summary to file')
     logger.info('Save logs to file')

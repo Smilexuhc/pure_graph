@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument('--loss_norm', type=int, default=1, choices=[0, 1])
     parser.add_argument('--epochs', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=6000)
-    parser.add_argument('--sampler', type=str, default='rw', choices=['rw', 'ns', 'rn'])
+    parser.add_argument('--sampler', type=str, default='rw', choices=['rw', 'ns', 'rn', 'edge', 'node', 'cluster'])
     parser.add_argument('--gcn_type', type=str, default='sage', choices=['sage', 'gat'])
     parser.add_argument('--use_gpu', type=int, default=1, choices=[0, 1])
     parser.add_argument('--save_log', type=int, default=1, choices=[0, 1])
