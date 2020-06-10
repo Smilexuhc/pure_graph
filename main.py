@@ -1,17 +1,16 @@
 from parse_args import parse_args, get_log_name
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
 
 from logger import LightLogging
-from sampler import MySAINTSampler
 from sklearn.metrics import accuracy_score
 import tensorboardX
 from utlis import load_dataset, build_loss_op, build_sampler
 import pandas as pd
+from time import time
+
 
 log_path = './logs'
 summary_path = './summary'
@@ -88,9 +87,15 @@ def eval_sample(norm_loss):
         res_batch['nid'] = data.indices.cpu().numpy()
         res_batch['pred'] = pred.cpu().numpy()
         res_df_list.append(res_batch)
+    res_df_duplicate = pd.concat(res_df_list)
+    start_time = time()
+    tmp = res_df_duplicate.groupby(['nid', 'pred']).size().unstack().fillna(0)
+    res_df = pd.DataFrame()
+    res_df['nid'] = tmp.index
+    res_df['pred'] = tmp.values.argmax(axis=1)
+    print('Groupby cost time: {}s'.format(time() - start_time))
+    # res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x))).reset_index()  # 10s
 
-    res_df = pd.concat(res_df_list)
-    res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x))).reset_index()
     res_df.columns = ['nid', 'pred']
     res_df = res_df.merge(node_df, on=['nid'], how='left')
 
@@ -100,6 +105,17 @@ def eval_sample(norm_loss):
     accs = accs['acc'].values
 
     return accs
+
+
+def func(x):
+    if x in train_nid:
+        return 0
+    elif x in val_nid:
+        return 1
+    elif x in test_nid:
+        return 2
+    else:
+        return -1
 
 
 if __name__ == '__main__':
@@ -129,18 +145,6 @@ if __name__ == '__main__':
     train_nid = data.indices[data.train_mask].numpy()
     test_nid = data.indices[data.test_mask].numpy()
     val_nid = data.indices[data.val_mask].numpy()
-
-
-    def func(x):
-        if x in train_nid:
-            return 0
-        elif x in val_nid:
-            return 1
-        elif x in test_nid:
-            return 2
-        else:
-            return -1
-
 
     node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
