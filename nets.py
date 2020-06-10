@@ -1,11 +1,12 @@
 import torch
-from torch_geometric.nn import SAGEConv,GATConv
+from torch_geometric.nn import SAGEConv, GATConv
 import torch.nn.functional as F
+import torch.nn as nn
 
 
-class SAGENet(torch.nn.Module):
+class SAGENet(nn.Module):
 
-    def __init__(self, in_channels,hidden_channels,out_channels):
+    def __init__(self, in_channels, hidden_channels, out_channels):
         super(SAGENet, self).__init__()
         self.conv1 = SAGEConv(in_channels, hidden_channels)
         self.conv2 = SAGEConv(hidden_channels, hidden_channels)
@@ -26,12 +27,12 @@ class SAGENet(torch.nn.Module):
         x3 = F.dropout(x3, p=0.2, training=self.training)
         x = torch.cat([x1, x2, x3], dim=-1)
         x = self.lin(x)
-        return x.log_softmax(dim=-1)
+        return x
 
 
-class GATNet(torch.nn.Module):
+class GATNet(nn.Module):
 
-    def __init__(self, in_channels,hidden_channels,out_channels):
+    def __init__(self, in_channels, hidden_channels, out_channels):
         super(GATNet, self).__init__()
         self.conv1 = GATConv(in_channels, hidden_channels)
         self.conv2 = GATConv(hidden_channels, hidden_channels)
@@ -53,6 +54,5 @@ class GATNet(torch.nn.Module):
         x = torch.cat([x1, x2, x3], dim=-1)
         x = self.lin(x)
         return x.log_softmax(dim=-1)
-
 
 

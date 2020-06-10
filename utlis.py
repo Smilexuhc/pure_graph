@@ -3,6 +3,8 @@ from torch_geometric.datasets import Flickr,Reddit,PPI,Yelp
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
     NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
+import torch.nn as nn
+from metric_and_loss import NormCrossEntropyLoss,NormBCEWithLogitsLoss
 
 
 def load_dataset(dataset='flickr'):
@@ -34,6 +36,17 @@ def load_dataset(dataset='flickr'):
 
     return dataset
 
+def build_loss_op(args):
+    if args.dataset in ['flickr','reddit']:
+        if args.loss_norm == 1:
+            return NormCrossEntropyLoss()
+        else:
+            return nn.CrossEntropyLoss(reduction='none')
+    else:
+        if args.loss_norm == 1:
+            return NormBCEWithLogitsLoss()
+        else:
+            return nn.BCEWithLogitsLoss(reduction='none')
 
 
 

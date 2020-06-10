@@ -1,24 +1,25 @@
 from parse_args import parse_args, get_log_name
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
     NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
-
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
+
 from logger import LightLogging
 from sampler import MySAINTSampler
 from sklearn.metrics import accuracy_score
 import tensorboardX
-from utlis import load_dataset
+from utlis import load_dataset, build_loss_op
 import pandas as pd
 
 log_path = './logs'
 summary_path = './summary'
 
 
-def train_sample(norm_loss):
+def train_sample(norm_loss, loss_op):
     model.train()
     model.set_aggr('add')
 
@@ -28,12 +29,10 @@ def train_sample(norm_loss):
         optimizer.zero_grad()
         if norm_loss == 1:
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
-
-            loss = F.nll_loss(out, data.y, reduction='none')
-            loss = (loss * data.node_norm)[data.train_mask].sum()
+            loss = loss_op(out, data)
         else:
             out = model(data.x, data.edge_index)
-            loss = F.nll_loss(out, data.y, reduction='none')[data.train_mask].mean()
+            loss = loss_op(out, data.y)[data.train_mask].mean()
         loss.backward()
         optimizer.step()
         total_loss += loss.item() * data.num_nodes
@@ -41,13 +40,15 @@ def train_sample(norm_loss):
     return total_loss / total_examples
 
 
-def train_full():
+def train_full(loss_op):
     model.train()
     model.set_aggr('mean')
 
     optimizer.zero_grad()
     out = model(data.x.to(device), data.edge_index.to(device))
-    loss = F.nll_loss(out[data.train_mask], data.y.to(device)[data.train_mask])
+
+    loss = loss_op(out[data.train_mask], data.y.to(device)[data.train_mask]).mean()
+
     loss.backward()
     optimizer.step()
     return loss.item()
@@ -146,21 +147,24 @@ if __name__ == '__main__':
     node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
     if args.sampler == 'rw':
-        logger.info('Use GraphSaint randomwalk sampler')
-        loader = GraphSAINTRandomWalkSampler(data, batch_size=args.batch_size, walk_length=2,
-                                             num_steps=5, sample_coverage=1000,
-                                             save_dir=dataset.processed_dir,
-                                             num_workers=0)
+        logger.info('Use GraphSaint randomwalk sampler(mysaint sampler)')
+        loader = MySAINTSampler(data, batch_size=args.batch_size, sample_type='random_walk',
+                                walk_length=2, sample_coverage=1000,
+                                save_dir=dataset.processed_dir)
     elif args.sampler == 'rn':
         logger.info('Use random node sampler')
-        loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size)
+        loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size * 3,
+                                walk_length=2, sample_coverage=1000)
     elif args.sampler == 'node':
         logger.info('Use GraphSaint node sampler')
-        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size)
+        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size,
+                                       num_steps=5, sample_coverage=1000, num_workers=0)
 
     elif args.sampler == 'edge':
         logger.info('Use GraphSaint edge sampler')
-        loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size)
+        loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size,
+                                       num_steps=5, sample_coverage=1000,
+                                       save_dir=dataset.processed_dir, num_workers=0)
     elif args.sampler == 'cluster':
         logger.info('Use cluster sampler')
         cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=dataset.processed_dir)
@@ -179,6 +183,8 @@ if __name__ == '__main__':
                 hidden_channels=256,
                 out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # todo refactor the loss_op
+    loss_op = build_loss_op(args)
 
     # todo replace by tensorboard
     summary_accs_train = []
@@ -186,9 +192,9 @@ if __name__ == '__main__':
 
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
-            loss = train_sample(norm_loss=args.loss_norm)
+            loss = train_sample(norm_loss=args.loss_norm,loss_op=loss_op)
         else:
-            loss = train_full()
+            loss = train_full(loss_op=loss_op)
         if args.eval_sample == 1:
             accs = eval_sample(norm_loss=args.loss_norm)
         else:
