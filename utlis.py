@@ -1,10 +1,10 @@
 import os.path as osp
-from torch_geometric.datasets import Flickr,Reddit,PPI,Yelp
+from torch_geometric.datasets import Flickr, Reddit, PPI, Yelp
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
     NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 import torch.nn as nn
-from metric_and_loss import NormCrossEntropyLoss,NormBCEWithLogitsLoss
+from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss
 
 
 def load_dataset(dataset='flickr'):
@@ -26,7 +26,7 @@ def load_dataset(dataset='flickr'):
         dataset = Reddit(path)
 
     elif dataset == 'ppi':
-        dataset= PPI(path)
+        dataset = PPI(path)
 
     elif dataset == 'yelp':
         dataset = Yelp(path)
@@ -36,8 +36,9 @@ def load_dataset(dataset='flickr'):
 
     return dataset
 
+
 def build_loss_op(args):
-    if args.dataset in ['flickr','reddit']:
+    if args.dataset in ['flickr', 'reddit']:
         if args.loss_norm == 1:
             return NormCrossEntropyLoss()
         else:
@@ -49,5 +50,36 @@ def build_loss_op(args):
             return nn.BCEWithLogitsLoss(reduction='none')
 
 
+def build_sampler(args, data, save_dir):
+    if args.sampler == 'rw-my':
+        msg = 'Use GraphSaint randomwalk sampler(mysaint sampler)'
+        loader = MySAINTSampler(data, batch_size=args.batch_size, sample_type='random_walk',
+                                walk_length=2, sample_coverage=1000,
+                                save_dir=save_dir)
+    elif args.sampler == 'node-my':
+        msg = 'Use random node sampler(mysaint sampler)'
+        loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size * 3,
+                                walk_length=2, sample_coverage=1000, save_dir=save_dir)
+    elif args.sampler == 'rw':
+        msg = 'Use GraphSaint randomwalk sampler'
+        loader = GraphSAINTRandomWalkSampler(data, batch_size=args.batch_size, walk_length=2,
+                                             num_steps=5, sample_coverage=1000,
+                                             save_dir=save_dir)
+    elif args.sampler == 'node':
+        msg = 'Use GraphSaint node sampler'
+        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size*3,
+                                       num_steps=5, sample_coverage=1000, num_workers=0, save_dir=save_dir)
 
+    elif args.sampler == 'edge':
+        msg = 'Use GraphSaint edge sampler'
+        loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size,
+                                       num_steps=5, sample_coverage=1000,
+                                       save_dir=save_dir, num_workers=0)
+    # elif args.sampler == 'cluster':
+    #     logger.info('Use cluster sampler')
+    #     cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=dataset.processed_dir)
+    #     raise NotImplementedError('Cluster loader not implement yet')
+    else:
+        raise KeyError('Sampler type error')
 
+    return loader,msg

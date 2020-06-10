@@ -2,8 +2,6 @@ from parse_args import parse_args, get_log_name
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.data import GraphSAINTRandomWalkSampler, \
-    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
@@ -12,7 +10,7 @@ from logger import LightLogging
 from sampler import MySAINTSampler
 from sklearn.metrics import accuracy_score
 import tensorboardX
-from utlis import load_dataset, build_loss_op
+from utlis import load_dataset, build_loss_op, build_sampler
 import pandas as pd
 
 log_path = './logs'
@@ -146,31 +144,8 @@ if __name__ == '__main__':
 
     node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
-    if args.sampler == 'rw':
-        logger.info('Use GraphSaint randomwalk sampler(mysaint sampler)')
-        loader = MySAINTSampler(data, batch_size=args.batch_size, sample_type='random_walk',
-                                walk_length=2, sample_coverage=1000,
-                                save_dir=dataset.processed_dir)
-    elif args.sampler == 'rn':
-        logger.info('Use random node sampler')
-        loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size * 3,
-                                walk_length=2, sample_coverage=1000)
-    elif args.sampler == 'node':
-        logger.info('Use GraphSaint node sampler')
-        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size,
-                                       num_steps=5, sample_coverage=1000, num_workers=0)
-
-    elif args.sampler == 'edge':
-        logger.info('Use GraphSaint edge sampler')
-        loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size,
-                                       num_steps=5, sample_coverage=1000,
-                                       save_dir=dataset.processed_dir, num_workers=0)
-    elif args.sampler == 'cluster':
-        logger.info('Use cluster sampler')
-        cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=dataset.processed_dir)
-        raise NotImplementedError('Cluster loader not implement yet')
-    else:
-        raise KeyError('Sampler type error')
+    loader, msg = build_sampler(args, data, dataset.processed_dir)
+    logger.info(msg)
 
     if args.use_gpu == 1:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -192,7 +167,7 @@ if __name__ == '__main__':
 
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
-            loss = train_sample(norm_loss=args.loss_norm,loss_op=loss_op)
+            loss = train_sample(norm_loss=args.loss_norm, loss_op=loss_op)
         else:
             loss = train_full(loss_op=loss_op)
         if args.eval_sample == 1:
