@@ -102,12 +102,11 @@ def eval_sample(norm_loss):
         res_batch['pred'] = pred.cpu().numpy()
         res_df_list.append(res_batch)
     res_df_duplicate = pd.concat(res_df_list)
-
+    start_time = time()
     tmp = res_df_duplicate.groupby(['nid', 'pred']).size().unstack().fillna(0)
     res_df = pd.DataFrame()
     res_df['nid'] = tmp.index
     res_df['pred'] = tmp.values.argmax(axis=1)
-
     # res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x))).reset_index()  # 10s
 
     res_df.columns = ['nid', 'pred']
@@ -159,7 +158,7 @@ if __name__ == '__main__':
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
     data.indices = torch.arange(0, data.num_nodes).int()
-
+    data.y = data.y.long()
     # todo add it into dataset or rewrite it in easy way
     if not is_multi:
         node_df = pd.DataFrame()
@@ -200,7 +199,7 @@ if __name__ == '__main__':
             if is_multi:
                 accs = eval_sample_multi(norm_loss=args.loss_norm)
             else:
-                accs = eval_sample()
+                accs = eval_sample(norm_loss=args.loss_norm)
         else:
             if is_multi:
                 accs = eval_full_multi()

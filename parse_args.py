@@ -38,7 +38,7 @@ def parse_args(config_path):
     parser.add_argument('--train_sample', type=int, default=1, choices=[0, 1])
     parser.add_argument('--eval_sample', type=int, default=0, choices=[0, 1])
     parser.add_argument('--loss_norm', type=int, default=1, choices=[0, 1])
-    parser.add_argument('--epochs', type=int, default=500)
+    parser.add_argument('--epochs', type=int)
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--sampler', type=str, default='rw',
                         choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster'])
