@@ -1,0 +1,14 @@
+flickr:
+  epochs: 300
+  batch_size: 6000
+
+  hparams:
+    hidden_units:
+    dropout_rates:
+    learning_rate:
+
+reddit:
+  epochs: 800
+  batch_size: 3000
+
+ppi:
