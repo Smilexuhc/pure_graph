@@ -5,12 +5,11 @@ import numpy as np
 from nets import SAGENet, GATNet
 
 from logger import LightLogging
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 import tensorboardX
 from utlis import load_dataset, build_loss_op, build_sampler
 import pandas as pd
 from time import time
-
 
 log_path = './logs'
 summary_path = './summary'
@@ -57,6 +56,7 @@ def eval_full():
     model.set_aggr('mean')
 
     out = model(data.x.to(device), data.edge_index.to(device))
+    out = out.log_softmax(dim=-1)
     pred = out.argmax(dim=-1)
     correct = pred.eq(data.y.to(device))
 
@@ -64,6 +64,19 @@ def eval_full():
     for _, mask in data('train_mask', 'val_mask', 'test_mask'):
         accs.append(correct[mask].sum().item() / mask.sum().item())
 
+    return accs
+
+
+@torch.no_grad()
+def eval_full_multi():
+    model.eval()
+    model.set_aggr('mean')
+    out = model(data.x.to(device), data.edge_index.to(device))
+    out = (out > 0).float().cpu().numpy()
+    accs = []
+    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+        score = f1_score(data.y[mask], out[mask], average='micro')
+        accs.append(score)
     return accs
 
 
@@ -81,6 +94,7 @@ def eval_sample(norm_loss):
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
         else:
             out = model(data.x, data.edge_index)
+        out = out.log_softmax(dim=-1)
         pred = out.argmax(dim=-1)
 
         res_batch = pd.DataFrame()
@@ -88,12 +102,12 @@ def eval_sample(norm_loss):
         res_batch['pred'] = pred.cpu().numpy()
         res_df_list.append(res_batch)
     res_df_duplicate = pd.concat(res_df_list)
-    start_time = time()
+
     tmp = res_df_duplicate.groupby(['nid', 'pred']).size().unstack().fillna(0)
     res_df = pd.DataFrame()
     res_df['nid'] = tmp.index
     res_df['pred'] = tmp.values.argmax(axis=1)
-    print('Groupby cost time: {}s'.format(time() - start_time))
+
     # res_df = res_df.groupby('nid')['pred'].apply(lambda x: np.argmax(np.bincount(x))).reset_index()  # 10s
 
     res_df.columns = ['nid', 'pred']
@@ -105,6 +119,10 @@ def eval_sample(norm_loss):
     accs = accs['acc'].values
 
     return accs
+
+
+def eval_sample_multi(norm_loss):
+    pass
 
 
 def func(x):
@@ -120,17 +138,22 @@ def func(x):
 
 if __name__ == '__main__':
 
-    args = parse_args()
+    args = parse_args(config_path='./default_hparams.yml')
     log_name = get_log_name(args, prefix='test')
-
     if args.save_log == 1:
         logger = LightLogging(log_path=log_path, log_name=log_name)
     else:
         logger = LightLogging(log_name=log_name)
+
     logger.info('Model setting: {}'.format(args))
 
     dataset = load_dataset(args.dataset)
     logger.info('Dataset: {}'.format(args.dataset))
+
+    if args.dataset in ['flickr', 'reddit']:
+        is_multi = False
+    else:
+        is_multi = True
 
     data = dataset[0]
     row, col = data.edge_index
@@ -138,15 +161,15 @@ if __name__ == '__main__':
     data.indices = torch.arange(0, data.num_nodes).int()
 
     # todo add it into dataset or rewrite it in easy way
-    node_df = pd.DataFrame()
-    node_df['nid'] = range(data.num_nodes)
-    node_df['y'] = data.y.cpu().numpy()
-    node_df['mask'] = -1
-    train_nid = data.indices[data.train_mask].numpy()
-    test_nid = data.indices[data.test_mask].numpy()
-    val_nid = data.indices[data.val_mask].numpy()
-
-    node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
+    if not is_multi:
+        node_df = pd.DataFrame()
+        node_df['nid'] = range(data.num_nodes)
+        node_df['y'] = data.y.cpu().numpy()
+        node_df['mask'] = -1
+        train_nid = data.indices[data.train_mask].numpy()
+        test_nid = data.indices[data.test_mask].numpy()
+        val_nid = data.indices[data.val_mask].numpy()
+        node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
 
     loader, msg = build_sampler(args, data, dataset.processed_dir)
     logger.info(msg)
@@ -162,7 +185,6 @@ if __name__ == '__main__':
                 hidden_channels=256,
                 out_channels=dataset.num_classes).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    # todo refactor the loss_op
     loss_op = build_loss_op(args)
 
     # todo replace by tensorboard
@@ -175,9 +197,15 @@ if __name__ == '__main__':
         else:
             loss = train_full(loss_op=loss_op)
         if args.eval_sample == 1:
-            accs = eval_sample(norm_loss=args.loss_norm)
+            if is_multi:
+                accs = eval_sample_multi(norm_loss=args.loss_norm)
+            else:
+                accs = eval_sample()
         else:
-            accs = eval_full()
+            if is_multi:
+                accs = eval_full_multi()
+            else:
+                accs = eval_full()
         if epoch % args.log_interval == 0:
             logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train-acc: {accs[0]:.4f}, '
                         f'Val-acc: {accs[1]:.4f}, Test-acc: {accs[2]:.4f}')

@@ -53,6 +53,7 @@ class GATNet(nn.Module):
         x3 = F.dropout(x3, p=0.2, training=self.training)
         x = torch.cat([x1, x2, x3], dim=-1)
         x = self.lin(x)
+
         return x.log_softmax(dim=-1)
 
 

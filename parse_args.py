@@ -56,9 +56,14 @@ def parse_args(config_path):
     config = parse_config(config_path)
     config = config[args['dataset']]
     config = EasyDict(config)
+
+    if not config:
+        raise ValueError('Please check default hparams file!')
+
     for k, v in args.items():
         if v is not None:
             config[k] = v
+
     return config
 
 
@@ -68,4 +73,3 @@ def get_log_name(args, prefix='test', use_args=None):
     args = vars(args)
     log_name = prefix + '-' + '-'.join([arg + '=' + str(args[arg]) for arg in use_args])
     return log_name
-

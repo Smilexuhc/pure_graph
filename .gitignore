@@ -1,2 +1,4 @@
 /data/
 /.idea
+/test_ppi.py
+/.gitignore
