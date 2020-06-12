@@ -58,8 +58,7 @@ def build_sampler(args, data, save_dir):
     if args.sampler == 'rw-my':
         msg = 'Use GraphSaint randomwalk sampler(mysaint sampler)'
         loader = MySAINTSampler(data, batch_size=args.batch_size, sample_type='random_walk',
-                                walk_length=2, sample_coverage=1000,
-                                save_dir=save_dir)
+                                walk_length=2, sample_coverage=1000, save_dir=save_dir)
     elif args.sampler == 'node-my':
         msg = 'Use random node sampler(mysaint sampler)'
         loader = MySAINTSampler(data, sample_type='node', batch_size=args.batch_size * 3,
