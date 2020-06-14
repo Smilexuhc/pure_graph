@@ -102,8 +102,8 @@ def eval_sample(norm_loss):
         res_batch['nid'] = data.indices.cpu().numpy()
         res_batch['pred'] = pred.cpu().numpy()
         res_df_list.append(res_batch)
+
     res_df_duplicate = pd.concat(res_df_list)
-    start_time = time()
     tmp = res_df_duplicate.groupby(['nid', 'pred']).size().unstack().fillna(0)
     res_df = pd.DataFrame()
     res_df['nid'] = tmp.index
@@ -122,7 +122,42 @@ def eval_sample(norm_loss):
 
 
 def eval_sample_multi(norm_loss):
-    pass
+    model.eval()
+    model.set_aggr('add')
+
+    res_df_list = []
+    for data in loader:
+
+        data = data.to(device)
+
+        if norm_loss == 1:
+            out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
+        else:
+            out = model(data.x, data.edge_index)
+        res_batch = (out > 0).float().cpu().numpy()
+        res_batch = pd.DataFrame(res_batch)
+        res_batch['nid'] = data.indices.cpu().numpy()
+        res_df_list.append(res_batch)
+
+    res_df_duplicate = pd.concat(res_df_list)
+    length = res_df_duplicate.groupby(['nid']).size().values
+    tmp = res_df_duplicate.groupby(['nid']).sum()
+    nid = tmp.index
+    prob = tmp.values
+    res_matrix = []
+    for i in range(prob.shape[1]):
+        a = tmp[:, i] / length
+        a[a >= 0.5] = 1
+        a[a < 0.5] = 0
+        res_matrix.append(a)
+    res_matrix = np.array(res_matrix).T
+
+    accs = []
+    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
+        score = f1_score(data.y[mask[nid]], res_matrix[mask[nid]], average='micro')
+        accs.append(score)
+
+    return accs
 
 
 def func(x):
