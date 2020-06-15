@@ -146,16 +146,14 @@ def eval_sample_multi(norm_loss):
     prob = tmp.values
     res_matrix = []
     for i in range(prob.shape[1]):
-        a = tmp[:, i] / length
+        a = prob[:, i] / length
         a[a >= 0.5] = 1
         a[a < 0.5] = 0
         res_matrix.append(a)
     res_matrix = np.array(res_matrix).T
-
     accs = []
-    for _, mask in data('train_mask', 'val_mask', 'test_mask'):
-        score = f1_score(data.y[mask[nid]], res_matrix[mask[nid]], average='micro')
-        accs.append(score)
+    for mask in [train_nid,val_nid,test_nid]:
+        accs.append(f1_score(label_matrix[mask],res_matrix[mask],average='micro'))
 
     return accs
 
@@ -205,6 +203,11 @@ if __name__ == '__main__':
         test_nid = data.indices[data.test_mask].numpy()
         val_nid = data.indices[data.val_mask].numpy()
         node_df['mask'] = node_df['nid'].apply(lambda x: func(x))
+    else:
+        train_nid = data.indices[data.train_mask].numpy()
+        test_nid = data.indices[data.test_mask].numpy()
+        val_nid = data.indices[data.val_mask].numpy()
+        label_matrix = data.y.numpy()
 
     loader, msg = build_sampler(args, data, dataset.processed_dir)
     logger.info(msg)
