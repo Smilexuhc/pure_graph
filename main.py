@@ -17,7 +17,10 @@ torch.manual_seed(2020)
 
 def train_sample(norm_loss, loss_op):
     model.train()
-    model.set_aggr('add')
+    if norm_loss:
+        model.set_aggr('add')
+    else:
+        model.set_aggr('mean')
 
     total_loss = total_examples = 0
     for data in loader:
@@ -83,7 +86,10 @@ def eval_full_multi():
 @torch.no_grad()
 def eval_sample(norm_loss):
     model.eval()
-    model.set_aggr('add')
+    if norm_loss:
+        model.set_aggr('add')
+    else:
+        model.set_aggr('mean')
 
     res_df_list = []
     for data in loader:
@@ -123,7 +129,10 @@ def eval_sample(norm_loss):
 
 def eval_sample_multi(norm_loss):
     model.eval()
-    model.set_aggr('add')
+    if norm_loss:
+        model.set_aggr('add')
+    else:
+        model.set_aggr('mean')
 
     res_df_list = []
     for data in loader:
