@@ -3,7 +3,6 @@ import torch
 from torch_geometric.utils import degree
 import numpy as np
 from nets import SAGENet, GATNet
-
 from logger import LightLogging
 from sklearn.metrics import accuracy_score, f1_score
 import tensorboardX
@@ -92,6 +91,7 @@ def eval_sample(norm_loss):
         data = data.to(device)
 
         if norm_loss == 1:
+            # TODO: check edge attr
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
         else:
             out = model(data.x, data.edge_index)
@@ -142,7 +142,6 @@ def eval_sample_multi(norm_loss):
     res_df_duplicate = pd.concat(res_df_list)
     length = res_df_duplicate.groupby(['nid']).size().values
     tmp = res_df_duplicate.groupby(['nid']).sum()
-    nid = tmp.index
     prob = tmp.values
     res_matrix = []
     for i in range(prob.shape[1]):
