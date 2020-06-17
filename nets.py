@@ -41,7 +41,7 @@ class NormGATConv(MessagePassing):
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
 
-    def __init__(self, in_channels, out_channels, heads=1, concat=True,
+    def __init__(self, in_channels, out_channels, heads=2, concat=True,
                  negative_slope=0.2, dropout=0, bias=True, **kwargs):
         super(NormGATConv, self).__init__(aggr='add', **kwargs)
 

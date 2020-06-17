@@ -2,7 +2,7 @@ import os.path as osp
 from torch_geometric.datasets import Flickr, Reddit, Yelp
 from dataset import PPI
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
-    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler
+    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 import torch.nn as nn
 from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss
@@ -70,7 +70,7 @@ def build_sampler(args, data, save_dir):
                                              save_dir=save_dir)
     elif args.sampler == 'node':
         msg = 'Use GraphSaint node sampler'
-        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size*3,
+        loader = GraphSAINTNodeSampler(data, batch_size=args.batch_size * 3,
                                        num_steps=5, sample_coverage=1000, num_workers=0, save_dir=save_dir)
 
     elif args.sampler == 'edge':
@@ -78,11 +78,12 @@ def build_sampler(args, data, save_dir):
         loader = GraphSAINTEdgeSampler(data, batch_size=args.batch_size,
                                        num_steps=5, sample_coverage=1000,
                                        save_dir=save_dir, num_workers=0)
-    # elif args.sampler == 'cluster':
-    #     logger.info('Use cluster sampler')
-    #     cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=dataset.processed_dir)
-    #     raise NotImplementedError('Cluster loader not implement yet')
+    elif args.sampler == 'cluster':
+        msg = 'Use cluster sampler'
+        cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=save_dir)
+        loader = ClusterLoader(cluster_data, batch_size=20, shuffle=True,
+                               num_workers=0)
     else:
         raise KeyError('Sampler type error')
 
-    return loader,msg
+    return loader, msg

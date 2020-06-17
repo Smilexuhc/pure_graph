@@ -239,6 +239,7 @@ if __name__ == '__main__':
     model = Net(in_channels=dataset.num_node_features,
                 hidden_channels=256,
                 out_channels=dataset.num_classes).to(device)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     loss_op = build_loss_op(args)
 
