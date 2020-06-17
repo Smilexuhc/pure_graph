@@ -47,6 +47,7 @@ def parse_args(config_path):
     parser.add_argument('--save_log', type=int, default=1, choices=[0, 1])
     parser.add_argument('--save_summary', type=int, default=1, choices=[0, 1])
     parser.add_argument('--log_interval', type=int, default=10)
+    parser.add_argument('--self_loop', type=int, default=1,choices=[0,1])
 
     args = parser.parse_args()
     if args.train_sample == 0:

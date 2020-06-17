@@ -1,6 +1,6 @@
 from parse_args import parse_args, get_log_name
 import torch
-from torch_geometric.utils import degree
+from torch_geometric.utils import degree, contains_self_loops, add_self_loops, remove_self_loops
 import numpy as np
 from nets import SAGENet, GATNet
 from logger import LightLogging
@@ -160,8 +160,8 @@ def eval_sample_multi(norm_loss):
         res_matrix.append(a)
     res_matrix = np.array(res_matrix).T
     accs = []
-    for mask in [train_nid,val_nid,test_nid]:
-        accs.append(f1_score(label_matrix[mask],res_matrix[mask],average='micro'))
+    for mask in [train_nid, val_nid, test_nid]:
+        accs.append(f1_score(label_matrix[mask], res_matrix[mask], average='micro'))
 
     return accs
 
@@ -197,10 +197,19 @@ if __name__ == '__main__':
         is_multi = True
 
     data = dataset[0]
+
+    # if args.self_loop == 1 and contains_self_loops(data.edge_index) is False:
+    #     logger.info('Raw graph do not contains self loop, add self loop now.')
+    #     data.edge_index, _ = add_self_loops(data.edge_index, num_nodes=data.num_nodes)
+    # if args.self_loop == 0 and contains_self_loops(data.edge_index):
+    #     logger.info('Raw graph contains self loop, remove self loop now.')
+    #     data.edge_index, _ = remove_self_loops(data.edge_index)
+
     row, col = data.edge_index
     data.edge_attr = 1. / degree(col, data.num_nodes)[col]  # Norm by in-degree.
     data.indices = torch.arange(0, data.num_nodes).int()
     data.y = data.y.long()
+
     # todo add it into dataset or rewrite it in easy way
     if not is_multi:
         node_df = pd.DataFrame()

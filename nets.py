@@ -74,7 +74,7 @@ class NormGATConv(MessagePassing):
         glorot(self.att_j)
         zeros(self.bias)
 
-    def forward(self, x, edge_index, edge_weight, return_attention_weights=False):
+    def forward(self, x, edge_index, edge_weight=None):
         """"""
 
         if torch.is_tensor(x):
@@ -83,12 +83,11 @@ class NormGATConv(MessagePassing):
         else:
             x = (self.lin(x[0]), self.lin(x[1]))
 
-        edge_index, _ = remove_self_loops(edge_index)
-        edge_index, _ = add_self_loops(edge_index,
-                                       num_nodes=x[1].size(self.node_dim))
+        # edge_index, _ = remove_self_loops(edge_index)
+        # edge_index, _ = add_self_loops(edge_index,
+        #                                num_nodes=x[1].size(self.node_dim))
 
-        out = self.propagate(edge_index, x=x, edge_weight=edge_weight,
-                             return_attention_weights=return_attention_weights)
+        out = self.propagate(edge_index, x=x, edge_weight=edge_weight)
 
         if self.concat:
             out = out.view(-1, self.heads * self.out_channels)
@@ -98,13 +97,9 @@ class NormGATConv(MessagePassing):
         if self.bias is not None:
             out = out + self.bias
 
-        if return_attention_weights:
-            alpha, self.__alpha__ = self.__alpha__, None
-            return out, (edge_index, alpha)
-        else:
-            return out
+        return out
 
-    def message(self, x_i, x_j, edge_index_i, size_i, edge_weight, return_attention_weights):
+    def message(self, x_i, x_j, edge_index_i, size_i, edge_weight):
         # Compute attention coefficients.
         x_i = x_i.view(-1, self.heads, self.out_channels)
         x_j = x_j.view(-1, self.heads, self.out_channels)
@@ -112,13 +107,12 @@ class NormGATConv(MessagePassing):
         alpha = (x_i * self.att_i).sum(-1) + (x_j * self.att_j).sum(-1)
         alpha = F.leaky_relu(alpha, self.negative_slope)
         alpha = softmax(alpha, edge_index_i, size_i)
-        alpha = alpha
-
-        if return_attention_weights:
-            self.__alpha__ = alpha
 
         # Sample attention coefficients stochastically.
         alpha = F.dropout(alpha, p=self.dropout, training=self.training)
+
+        if edge_weight is not None:
+            alpha = torch.mul(alpha.T, edge_weight).T
 
         return x_j * alpha.view(-1, self.heads, 1)
 
@@ -156,12 +150,12 @@ class SAGENet(nn.Module):
 
 class GATNet(nn.Module):
 
-    def __init__(self, in_channels, hidden_channels, out_channels):
+    def __init__(self, in_channels, hidden_channels, out_channels, num_heads=2):
         super(GATNet, self).__init__()
-        self.conv1 = NormGATConv(in_channels, hidden_channels)
-        self.conv2 = NormGATConv(hidden_channels, hidden_channels)
-        self.conv3 = NormGATConv(hidden_channels, hidden_channels)
-        self.lin = torch.nn.Linear(3 * hidden_channels, out_channels)
+        self.conv1 = NormGATConv(in_channels, hidden_channels, heads=num_heads)
+        self.conv2 = NormGATConv(hidden_channels*num_heads, hidden_channels)
+        self.conv3 = NormGATConv(hidden_channels*num_heads, hidden_channels)
+        self.lin = torch.nn.Linear(3 * hidden_channels*num_heads, out_channels)
 
     def set_aggr(self, aggr):
         self.conv1.aggr = aggr
@@ -178,4 +172,4 @@ class GATNet(nn.Module):
         x = torch.cat([x1, x2, x3], dim=-1)
         x = self.lin(x)
 
-        return x.log_softmax(dim=-1)
+        return x
