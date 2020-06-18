@@ -32,6 +32,9 @@ def parse_args(config_path):
     args = parser.parse_args()
     if args.train_sample == 0:
         args.loss_norm = 0
+    if args.sampler == 'cluster':
+        args.loss_norm = 0
+
     args = vars(args)
 
     config = parse_config(config_path)

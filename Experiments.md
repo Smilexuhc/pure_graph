@@ -1,0 +1,85 @@
+# Experiments
+
+## Flickr
+
+batch_size=6000
+
+sage num_hidden=256
+
+gat num_heads=4 num_hidden=256
+
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
+| :--------: | :-------: | :------: | :-----: | :-------: | :-----------: | :--------: | :------------: |
+|    full    |   full    |   sage   |    -    |     -     |    0.5249     |    195     |       -        |
+|    full    |   full    |   gat    |    -    |     -     |       -       |     -      |       -        |
+|   sample   |   full    |   sage   |  rw-my  |   True    |    0.5163     |     12     | (14560,86300)  |
+|   sample   |   full    |   sage   |  rw-my  |   False   |    0.5164     |     10     | (14500,86000)  |
+|   sample   |   full    |   gat    |  rw-my  |   True    |    0.5130     |    107     | (14500,86000)  |
+|   sample   |   full    |   gat    |  rw-my  |   False   |    0.4977     |     96     | (14500,86000)  |
+|   sample   |  sample   |   sage   |  rw-my  |   True    |    0.5041     |     18     |                |
+|   sample   |  sample   |   sage   |  rw-my  |   False   |    0.5122     |     10     |                |
+|   sample   |  sample   |   gat    |  rw-my  |   True    |    0.5188     |     59     |                |
+|   sample   |  sample   |   gat    |  rw-my  |   False   |    0.5168     |     69     |                |
+|   sample   |   full    |   sage   |  rn-my  |   True    |    0.5039     |     24     | (17850,36000)  |
+|   sample   |   full    |   sage   |  rn-my  |   False   |    0.5083     |     34     | (17850,36000)  |
+|   sample   |   full    |   gat    |  rn-my  |   True    |    0.4813     |    119     | (17850,36000)  |
+|   sample   |  sample   |   sage   |  rn-my  |   True    |    0.4783     |     30     | (17850,36000)  |
+|   sample   |  sample   |   sage   |  tn-my  |   False   |    0.4887     |     38     | (17850,36000)  |
+|   sample   |   full    |   sage   | cluster |     -     |    0.5163     |     41     | (17850,97000)  |
+|   sample   |  sample   |   sage   | cluster |     -     |    0.5034     |     40     | (17850,97000)  |
+|   sample   |   full    |   gat    | cluster |     -     |    0.4662     |    117     | (17850,97000)  |
+|   sample   |  sample   |   gat    | cluster |     -     |    0.4712     |     79     | (17850,97000)  |
+
+## reddit
+
+batch_size=3000
+
+num_heads=1
+
+num_epochs=800
+
+
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
+| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
+| sample     | sample    | sage     | rw-my   | True      | 0.9534        | 779        | (8680,850000)  |
+| sample     | sample    | sage     | rw-my   | False     | 0.9714        | 743        | (8680,850000)  |
+| sample     | sample    | gat      | rw-my   | True      | 0.9221        | 100        |                |
+| sample     | sample    | gat      | rw-my   | False     | 0.9495        | 84         |                |
+| sample     | sample    | sage     | cluster | -         |               |            | 3100 185000    |
+|            |           |          | cluster |           |               |            |                |
+
+## ppi
+
+num_heads=4
+
+num_epochs=1500
+
+
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
+| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
+| full       | full      | sage     | -       | -         | 0.8129        | 1498       |                |
+| sample     | full      | sage     | rw-my   | True      | 0.8717        | 1499       | (8350,260000)  |
+| sample     | full      | sage     | rw-my   | False     | 0.8711        | 1482       |                |
+| sample     | full      | gat      | rw-my   | True      | 0.5610        | 1470       |                |
+| sample     | full      | gat      | rw-my   | False     | 0.5492        | 1468       |                |
+| sample     | sample    | sage     | rw-my   | True      | 0.8552        | 1468       |                |
+| sample     | sample    | sage     | rw-my   | False     | 0.8557        | 1489       |                |
+| sample     | full      | sage     | rn-my   | True      | 0.7222        | 1492       |                |
+| sample     | full      | sage     | rn-my   | False     | 0.8089        | 1484       | (14755,450000) |
+| sample     | sample    | sage     | rn-my   | True      | 0.8205        | 1489       |                |
+| sample     | sample    | sage     | rn-my   | False     | 0.8125        | 1498       |                |
+
+## ppi-large
+
+num_epochs=800
+
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
+| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
+| full       | full      | sage     | -       | -         | 0.8771        | 799        |                |
+| sample     | full      | sage     | rw-my   | True      | 0.8946        | 794        | (13450,277000) |
+| sample     | full      | sage     | rw-my   | False     | 0.8942        | 793        |                |
+| sample     | sample    | sage     | rw-my   | True      | 0.8671        | 775        |                |
+| sample     | sample    | sage     | rw-my   | False     | 0.8732        | 771        |                |
+| sample     | full      | sage     | cluster | -         |               |            | (14236,270000) |
+| sample     | sample    | sage     | cluster | -         |               |            |                |
+
