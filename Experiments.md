@@ -27,8 +27,8 @@ gat num_heads=4 num_hidden=256
 |   sample   |  sample   |   sage   |  tn-my  |   False   |    0.4887     |     38     | (17850,36000)  |
 |   sample   |   full    |   sage   | cluster |     -     |    0.5163     |     41     | (17850,97000)  |
 |   sample   |  sample   |   sage   | cluster |     -     |    0.5034     |     40     | (17850,97000)  |
-|   sample   |   full    |   gat    | cluster |     -     |    0.4662     |    117     | (17850,97000)  |
-|   sample   |  sample   |   gat    | cluster |     -     |    0.4712     |     79     | (17850,97000)  |
+|   sample   |   full    |   gat    | cluster |     -     |  **0.4662**   |    117     | (17850,97000)  |
+|   sample   |  sample   |   gat    | cluster |     -     |  **0.4712**   |     79     | (17850,97000)  |
 
 ## reddit
 
@@ -39,14 +39,14 @@ num_heads=1
 num_epochs=800
 
 
-| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
-| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
-| sample     | sample    | sage     | rw-my   | True      | 0.9534        | 779        | (8680,850000)  |
-| sample     | sample    | sage     | rw-my   | False     | 0.9714        | 743        | (8680,850000)  |
-| sample     | sample    | gat      | rw-my   | True      | 0.9221        | 100        |                |
-| sample     | sample    | gat      | rw-my   | False     | 0.9495        | 84         |                |
-| sample     | sample    | sage     | cluster | -         |               |            | 3100 185000    |
-|            |           |          | cluster |           |               |            |                |
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean)  |
+| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | --------------- |
+| sample     | sample    | sage     | rw-my   | True      | 0.9534        | 779        | (8680,850000)   |
+| sample     | sample    | sage     | rw-my   | False     | 0.9714        | 743        | (8680,850000)   |
+| sample     | sample    | gat      | rw-my   | True      | 0.9221        | 100        |                 |
+| sample     | sample    | gat      | rw-my   | False     | 0.9495        | 84         |                 |
+| sample     | sample    | sage     | cluster | -         |               |            | （3100,185000） |
+|            |           |          |         |           |               |            |                 |
 
 ## ppi
 
@@ -60,8 +60,8 @@ num_epochs=1500
 | full       | full      | sage     | -       | -         | 0.8129        | 1498       |                |
 | sample     | full      | sage     | rw-my   | True      | 0.8717        | 1499       | (8350,260000)  |
 | sample     | full      | sage     | rw-my   | False     | 0.8711        | 1482       |                |
-| sample     | full      | gat      | rw-my   | True      | 0.5610        | 1470       |                |
-| sample     | full      | gat      | rw-my   | False     | 0.5492        | 1468       |                |
+| sample     | full      | gat      | rw-my   | True      | **0.5610**    | 1470       |                |
+| sample     | full      | gat      | rw-my   | False     | **0.5492**    | 1468       |                |
 | sample     | sample    | sage     | rw-my   | True      | 0.8552        | 1468       |                |
 | sample     | sample    | sage     | rw-my   | False     | 0.8557        | 1489       |                |
 | sample     | full      | sage     | rn-my   | True      | 0.7222        | 1492       |                |
@@ -69,7 +69,7 @@ num_epochs=1500
 | sample     | sample    | sage     | rn-my   | True      | 0.8205        | 1489       |                |
 | sample     | sample    | sage     | rn-my   | False     | 0.8125        | 1498       |                |
 
-## ppi-large
+## ppi-large 
 
 num_epochs=800
 
@@ -78,8 +78,19 @@ num_epochs=800
 | full       | full      | sage     | -       | -         | 0.8771        | 799        |                |
 | sample     | full      | sage     | rw-my   | True      | 0.8946        | 794        | (13450,277000) |
 | sample     | full      | sage     | rw-my   | False     | 0.8942        | 793        |                |
+| sample     | full      | sage     | rw-my   | False     | 0.9102        | 1484       |                |
 | sample     | sample    | sage     | rw-my   | True      | 0.8671        | 775        |                |
 | sample     | sample    | sage     | rw-my   | False     | 0.8732        | 771        |                |
-| sample     | full      | sage     | cluster | -         |               |            | (14236,270000) |
-| sample     | sample    | sage     | cluster | -         |               |            |                |
+| sample     | full      | sage     | cluster | -         | 0.9036        | 793        | (14236,270000) |
+| sample     | sample    | sage     | cluster | -         | 0.8892        | 724        |                |
 
+
+
+## Conclusion
+
+1. full evaluate > sampling evaluate
+2. random walk sampler/ cluster sampler > random node sampler 
+3. No normalization > use normalization, when using sampling evaluating
+4. No normalization $\approx $ use normalization, when using full evaluating
+
+5. 
