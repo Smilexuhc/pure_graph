@@ -3,9 +3,10 @@ flickr:
   batch_size: 6000
 
   hparams:
-    hidden_units:
-    dropout_rates:
+    hidden_units: 256
+    dropout_rate:
     learning_rate:
+
 
 reddit:
   epochs: 800
@@ -17,7 +18,7 @@ ppi:
 
   hparams:
     hidden_units:
-    dropout_rates:
+    dropout_rate:
     learning_rate:
 
 ppi-large:
@@ -26,7 +27,7 @@ ppi-large:
 
   hparams:
     hidden_units:
-    dropout_rates:
+    dropout_rate:
     learning_rate:
 
 yelp:
@@ -35,5 +36,5 @@ yelp:
 
   hparams:
     hidden_units:
-    dropout_rates:
+    dropout_rate:
     learning_rate:

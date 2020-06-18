@@ -40,7 +40,7 @@ def train_sample(norm_loss, loss_op):
         total_loss += loss.item() * data.num_nodes
         total_examples += data.num_nodes
 
-    return total_loss / total_examples, np.mean(sub_graph_nodes),np.mean(sub_graph_edges)
+    return total_loss / total_examples, np.mean(sub_graph_nodes), np.mean(sub_graph_edges)
 
 
 def train_full(loss_op):
@@ -54,7 +54,7 @@ def train_full(loss_op):
 
     loss.backward()
     optimizer.step()
-    return loss.item(),data.num_nodes,data.edge_index.shape[1]
+    return loss.item(), data.num_nodes, data.edge_index.shape[1]
 
 
 @torch.no_grad()
@@ -238,11 +238,14 @@ if __name__ == '__main__':
     else:
         device = torch.device('cpu')
 
-    Net = {'sage': SAGENet, 'gat': GATNet}.get(args.gcn_type)
+    model = {'sage': SAGENet(in_channels=dataset.num_node_features,
+                             hidden_channels=args.hidden_sates,
+                             out_channels=dataset.num_classes),
+             'gat': GATNet(in_channels=dataset.num_node_features,
+                           hidden_channels=args.hidden_states,
+                           num_heads=args.num_heads,
+                           out_channels=dataset.num_classes)}.get(args.gcn_type)
     logger.info('GCN type: {}'.format(args.gcn_type))
-    model = Net(in_channels=dataset.num_node_features,
-                hidden_channels=256,
-                out_channels=dataset.num_classes).to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     loss_op = build_loss_op(args)
@@ -253,9 +256,9 @@ if __name__ == '__main__':
 
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
-            loss,sub_graph_nodes,sub_graph_edges = train_sample(norm_loss=args.loss_norm, loss_op=loss_op)
+            loss, sub_graph_nodes, sub_graph_edges = train_sample(norm_loss=args.loss_norm, loss_op=loss_op)
         else:
-            loss,sub_graph_nodes,sub_graph_edges= train_full(loss_op=loss_op)
+            loss, sub_graph_nodes, sub_graph_edges = train_full(loss_op=loss_op)
         if args.eval_sample == 1:
             if is_multi:
                 accs = eval_sample_multi(norm_loss=args.loss_norm)

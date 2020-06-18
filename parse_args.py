@@ -9,29 +9,6 @@ def parse_config(config_path):
     return config
 
 
-# def parse_args():
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('--dataset', type=str, default='flickr')
-#     parser.add_argument('--train_sample', type=int, default=1, choices=[0, 1])
-#     parser.add_argument('--eval_sample', type=int, default=0, choices=[0, 1])
-#     parser.add_argument('--loss_norm', type=int, default=1, choices=[0, 1])
-#     parser.add_argument('--epochs', type=int, default=500)
-#     parser.add_argument('--batch_size', type=int, default=6000)
-#     parser.add_argument('--sampler', type=str, default='rw',
-#                         choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster'])
-#     parser.add_argument('--gcn_type', type=str, default='sage', choices=['sage', 'gat'])
-#     parser.add_argument('--use_gpu', type=int, default=1, choices=[0, 1])
-#     parser.add_argument('--save_log', type=int, default=1, choices=[0, 1])
-#     parser.add_argument('--save_summary', type=int, default=1, choices=[0, 1])
-#     parser.add_argument('--log_interval', type=int, default=10)
-#
-#     args = parser.parse_args()
-#     if args.train_sample == 0:
-#         args.loss_norm = 0
-#
-#     return args
-
-
 def parse_args(config_path):
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset', type=str, default='flickr')
@@ -50,6 +27,7 @@ def parse_args(config_path):
     parser.add_argument('--self_loop', type=int, default=1, choices=[0, 1])
     parser.add_argument('--num_heads', type=int, default=1)
     parser.add_argument('--num_parts', type=int, default=100)
+    parser.add_argument('--hidden_states,', type=int, default=256)
 
     args = parser.parse_args()
     if args.train_sample == 0:
