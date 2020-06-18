@@ -13,7 +13,7 @@ reddit:
   batch_size: 3000
 
 ppi:
-  epochs: 300
+  epochs: 1500
   batch_size: 6000
 
   hparams:

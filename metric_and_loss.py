@@ -18,8 +18,16 @@ class NormBCEWithLogitsLoss(object):
 
     def __call__(self, out, data):
         loss = self.loss_op(out, data.y.type_as(out))
-        print('loss shape: ',loss.shape)
-        print('data node norm shape: ',data.node_norm.shape)
+        print('loss shape: ', loss.shape)
+        print('data node norm shape: ', data.node_norm.shape)
         # loss = (loss * data.node_norm)[data.train_mask].sum()
         loss = torch.mul(loss.T, data.node_norm).T[data.train_mask].sum()
         return loss
+
+
+class FixedBCEWithLogitsLoss(object):
+    def __init__(self,reduction='none'):
+        self.loss_op = nn.BCEWithLogitsLoss(reduction=reduction)
+
+    def __call__(self, out, data):
+        return self.loss_op(out, data.type_as(out))

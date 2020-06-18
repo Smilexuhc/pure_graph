@@ -5,7 +5,7 @@ from torch_geometric.data import GraphSAINTRandomWalkSampler, \
     NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 import torch.nn as nn
-from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss
+from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
 
 
 def load_dataset(dataset='flickr'):
@@ -51,7 +51,7 @@ def build_loss_op(args):
         if args.loss_norm == 1:
             return NormBCEWithLogitsLoss()
         else:
-            return nn.BCEWithLogitsLoss(reduction='none')
+            return FixedBCEWithLogitsLoss(reduction='none')
 
 
 def build_sampler(args, data, save_dir):

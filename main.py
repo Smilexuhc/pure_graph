@@ -245,6 +245,7 @@ if __name__ == '__main__':
                            hidden_channels=args.hidden_units,
                            num_heads=args.num_heads,
                            out_channels=dataset.num_classes)}.get(args.gcn_type)
+    model = model.to(device)
     logger.info('GCN type: {}'.format(args.gcn_type))
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
