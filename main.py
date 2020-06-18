@@ -239,10 +239,10 @@ if __name__ == '__main__':
         device = torch.device('cpu')
 
     model = {'sage': SAGENet(in_channels=dataset.num_node_features,
-                             hidden_channels=args.hidden_sates,
+                             hidden_channels=args.hidden_units,
                              out_channels=dataset.num_classes),
              'gat': GATNet(in_channels=dataset.num_node_features,
-                           hidden_channels=args.hidden_states,
+                           hidden_channels=args.hidden_units,
                            num_heads=args.num_heads,
                            out_channels=dataset.num_classes)}.get(args.gcn_type)
     logger.info('GCN type: {}'.format(args.gcn_type))
