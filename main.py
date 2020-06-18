@@ -21,11 +21,14 @@ def train_sample(norm_loss, loss_op):
         model.set_aggr('add')
     else:
         model.set_aggr('mean')
-
+    sub_graph_nodes = []
+    sub_graph_edges = []
     total_loss = total_examples = 0
     for data in loader:
         data = data.to(device)
         optimizer.zero_grad()
+        sub_graph_nodes.append(data.num_nodes)
+        sub_graph_edges.append(data.edge_index.shape[1])
         if norm_loss == 1:
             out = model(data.x, data.edge_index, data.edge_norm * data.edge_attr)
             loss = loss_op(out, data)
@@ -36,7 +39,8 @@ def train_sample(norm_loss, loss_op):
         optimizer.step()
         total_loss += loss.item() * data.num_nodes
         total_examples += data.num_nodes
-    return total_loss / total_examples
+
+    return total_loss / total_examples, np.mean(sub_graph_nodes),np.mean(sub_graph_edges)
 
 
 def train_full(loss_op):
@@ -50,7 +54,7 @@ def train_full(loss_op):
 
     loss.backward()
     optimizer.step()
-    return loss.item()
+    return loss.item(),data.num_nodes,data.edge_index.shape[1]
 
 
 @torch.no_grad()
@@ -249,9 +253,9 @@ if __name__ == '__main__':
 
     for epoch in range(1, args.epochs + 1):
         if args.train_sample == 1:
-            loss = train_sample(norm_loss=args.loss_norm, loss_op=loss_op)
+            loss,sub_graph_nodes,sub_graph_edges = train_sample(norm_loss=args.loss_norm, loss_op=loss_op)
         else:
-            loss = train_full(loss_op=loss_op)
+            loss,sub_graph_nodes,sub_graph_edges= train_full(loss_op=loss_op)
         if args.eval_sample == 1:
             if is_multi:
                 accs = eval_sample_multi(norm_loss=args.loss_norm)
@@ -263,11 +267,10 @@ if __name__ == '__main__':
             else:
                 accs = eval_full()
         if epoch % args.log_interval == 0:
-            logger.info(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Train-acc: {accs[0]:.4f}, '
-                        f'Val-acc: {accs[1]:.4f}, Test-acc: {accs[2]:.4f}')
+            logger.info(f'Epoch: {epoch:02d}, Sub graph: ({sub_graph_nodes}, {sub_graph_edges}), '
+                        f'Loss: {loss:.4f}, Train-acc: {accs[0]:.4f}, Val-acc: {accs[1]:.4f}, Test-acc: {accs[2]:.4f}')
 
         summary_accs_train.append(accs[0])
-
         summary_accs_test.append(accs[2])
 
     summary_accs_train = np.array(summary_accs_train)
