@@ -2,7 +2,7 @@
 
 ## Setting:
 
-**Dataset: **
+**Dataset:**
 
 1. Flickr
 
