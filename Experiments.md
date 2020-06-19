@@ -1,5 +1,33 @@
 # Experiments
 
+## Setting:
+
+**Dataset: **
+
+1. Flickr
+
+2. Reddit
+
+3. PPI
+
+4. PPI-large
+
+5. yelp will be added soon
+
+**Sampler:**
+
+1. Random Walker sampler
+
+2. Random Node sampler
+
+3. Cluster
+
+**GCN:**
+
+1. Sage
+
+2. GAT
+
 ## Flickr
 
 batch_size=6000
@@ -10,16 +38,16 @@ gat num_heads=4 num_hidden=256
 
 | train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
 | :--------: | :-------: | :------: | :-----: | :-------: | :-----------: | :--------: | :------------: |
-|    full    |   full    |   sage   |    -    |     -     |    0.5249     |    195     |       -        |
+|    full    |   full    |   sage   |    -    |     -     |    0.5249     |    195     | (89250,899756) |
 |    full    |   full    |   gat    |    -    |     -     |       -       |     -      |       -        |
 |   sample   |   full    |   sage   |  rw-my  |   True    |    0.5163     |     12     | (14560,86300)  |
 |   sample   |   full    |   sage   |  rw-my  |   False   |    0.5164     |     10     | (14500,86000)  |
 |   sample   |   full    |   gat    |  rw-my  |   True    |    0.5130     |    107     | (14500,86000)  |
 |   sample   |   full    |   gat    |  rw-my  |   False   |    0.4977     |     96     | (14500,86000)  |
-|   sample   |  sample   |   sage   |  rw-my  |   True    |    0.5041     |     18     |                |
-|   sample   |  sample   |   sage   |  rw-my  |   False   |    0.5122     |     10     |                |
-|   sample   |  sample   |   gat    |  rw-my  |   True    |    0.5188     |     59     |                |
-|   sample   |  sample   |   gat    |  rw-my  |   False   |    0.5168     |     69     |                |
+|   sample   |  sample   |   sage   |  rw-my  |   True    |    0.5041     |     18     | (14500,86000)  |
+|   sample   |  sample   |   sage   |  rw-my  |   False   |    0.5122     |     10     | (14500,86000)  |
+|   sample   |  sample   |   gat    |  rw-my  |   True    |    0.5188     |     59     | (14500,86000)  |
+|   sample   |  sample   |   gat    |  rw-my  |   False   |    0.5168     |     69     | (14500,86000)  |
 |   sample   |   full    |   sage   |  rn-my  |   True    |    0.5039     |     24     | (17850,36000)  |
 |   sample   |   full    |   sage   |  rn-my  |   False   |    0.5083     |     34     | (17850,36000)  |
 |   sample   |   full    |   gat    |  rn-my  |   True    |    0.4813     |    119     | (17850,36000)  |
@@ -39,14 +67,15 @@ num_heads=1
 num_epochs=800
 
 
-| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean)  |
-| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | --------------- |
-| sample     | sample    | sage     | rw-my   | True      | 0.9534        | 779        | (8680,850000)   |
-| sample     | sample    | sage     | rw-my   | False     | 0.9714        | 743        | (8680,850000)   |
-| sample     | sample    | gat      | rw-my   | True      | 0.9221        | 100        |                 |
-| sample     | sample    | gat      | rw-my   | False     | 0.9495        | 84         |                 |
-| sample     | sample    | sage     | cluster | -         |               |            | （3100,185000） |
-|            |           |          |         |           |               |            |                 |
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch |   subgraph(mean)    |
+| :--------: | :-------: | :------: | :-----: | :-------: | ------------- | ---------- | :-----------------: |
+|    full    |   full    |    -     |    -    |     -     | oom           | -          |  (232965,11606919)  |
+|   sample   |  sample   |   sage   |  rw-my  |   True    | 0.9534        | 779        |    (8680,850000)    |
+|   sample   |  sample   |   sage   |  rw-my  |   False   | 0.9714        | 743        |    (8680,850000)    |
+|   sample   |  sample   |   gat    |  rw-my  |   True    | 0.9221        | 100        |    (8680,850000)    |
+|   sample   |  sample   |   gat    |  rw-my  |   False   | 0.9495        | 84         |    (8680,850000)    |
+|   sample   |  sample   |   sage   | cluster |     -     | 0.9381        | 176        | **（3100,185000）** |
+|   sample   |  sample   |   gat    | cluster |     -     | 0.8850        | 686        |   （3100,185000）   |
 
 ## ppi
 
@@ -55,34 +84,33 @@ num_heads=4
 num_epochs=1500
 
 
-| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
-| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
-| full       | full      | sage     | -       | -         | 0.8129        | 1498       |                |
-| sample     | full      | sage     | rw-my   | True      | 0.8717        | 1499       | (8350,260000)  |
-| sample     | full      | sage     | rw-my   | False     | 0.8711        | 1482       |                |
-| sample     | full      | gat      | rw-my   | True      | **0.5610**    | 1470       |                |
-| sample     | full      | gat      | rw-my   | False     | **0.5492**    | 1468       |                |
-| sample     | sample    | sage     | rw-my   | True      | 0.8552        | 1468       |                |
-| sample     | sample    | sage     | rw-my   | False     | 0.8557        | 1489       |                |
-| sample     | full      | sage     | rn-my   | True      | 0.7222        | 1492       |                |
-| sample     | full      | sage     | rn-my   | False     | 0.8089        | 1484       | (14755,450000) |
-| sample     | sample    | sage     | rn-my   | True      | 0.8205        | 1489       |                |
-| sample     | sample    | sage     | rn-my   | False     | 0.8125        | 1498       |                |
+| train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean)  |
+| :--------: | :-------: | :------: | :-----: | :-------: | ------------- | ---------- | :-------------: |
+|    full    |   full    |   sage   |    -    |     -     | 0.8129        | 1498       | (14755,225,270) |
+|   sample   |   full    |   sage   |  rw-my  |   True    | 0.8717        | 1499       |  (8350,260000)  |
+|   sample   |   full    |   sage   |  rw-my  |   False   | 0.8711        | 1482       |  (8350,260000)  |
+|   sample   |   full    |   gat    |  rw-my  |   True    | **0.5610**    | 1470       |  (8350,260000)  |
+|   sample   |   full    |   gat    |  rw-my  |   False   | **0.5492**    | 1468       |  (8350,260000)  |
+|   sample   |  sample   |   sage   |  rw-my  |   True    | 0.8552        | 1468       |  (8350,260000)  |
+|   sample   |  sample   |   sage   |  rw-my  |   False   | 0.8557        | 1489       |  (8350,260000)  |
+|   sample   |   full    |   sage   |  rn-my  |   True    | 0.7222        | 1492       |  (8350,260000)  |
+|   sample   |   full    |   sage   |  rn-my  |   False   | 0.8089        | 1484       |  (8350,260000)  |
+|   sample   |  sample   |   sage   |  rn-my  |   True    | 0.8205        | 1489       |  (8350,260000)  |
+|   sample   |  sample   |   sage   |  rn-my  |   False   | 0.8125        | 1498       |  (8350,260000)  |
 
 ## ppi-large 
 
 num_epochs=800
 
 | train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
-| ---------- | --------- | -------- | ------- | --------- | ------------- | ---------- | -------------- |
-| full       | full      | sage     | -       | -         | 0.8771        | 799        |                |
-| sample     | full      | sage     | rw-my   | True      | 0.8946        | 794        | (13450,277000) |
-| sample     | full      | sage     | rw-my   | False     | 0.8942        | 793        |                |
-| sample     | full      | sage     | rw-my   | False     | 0.9102        | 1484       |                |
-| sample     | sample    | sage     | rw-my   | True      | 0.8671        | 775        |                |
-| sample     | sample    | sage     | rw-my   | False     | 0.8732        | 771        |                |
-| sample     | full      | sage     | cluster | -         | 0.9036        | 793        | (14236,270000) |
-| sample     | sample    | sage     | cluster | -         | 0.8892        | 724        |                |
+| :--------: | :-------: | :------: | :-----: | :-------: | :-----------: | :--------: | :------------: |
+|    full    |   full    |   sage   |    -    |     -     |    0.8771     |    799     | (56944,818716) |
+|   sample   |   full    |   sage   |  rw-my  |   True    |    0.8946     |    794     | (13450,277000) |
+|   sample   |   full    |   sage   |  rw-my  |   False   |    0.8942     |    793     | (13450,277000) |
+|   sample   |  sample   |   sage   |  rw-my  |   True    |    0.8671     |    775     | (13450,277000) |
+|   sample   |  sample   |   sage   |  rw-my  |   False   |    0.8732     |    771     | (13450,277000) |
+|   sample   |   full    |   sage   | cluster |     -     |    0.9036     |    793     | (14236,270000) |
+|   sample   |  sample   |   sage   | cluster |     -     |    0.8892     |    724     | (14236,270000) |
 
 
 
@@ -93,4 +121,4 @@ num_epochs=800
 3. No normalization > use normalization, when using sampling evaluating
 4. No normalization $\approx $ use normalization, when using full evaluating
 
-5. 
+5. sub graph size matters
