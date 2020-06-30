@@ -36,6 +36,8 @@ sage num_hidden=256
 
 gat num_heads=4 num_hidden=256
 
+
+
 | train_type | eval_type | gcn_type | sampler | loss_norm | Best f1-micro | Best epoch | subgraph(mean) |
 | :--------: | :-------: | :------: | :-----: | :-------: | :-----------: | :--------: | :------------: |
 |    full    |   full    |   sage   |    -    |     -     |    0.5249     |    195     | (89250,899756) |
@@ -111,6 +113,42 @@ num_epochs=800
 |   sample   |  sample   |   sage   |  rw-my  |   False   |    0.8732     |    771     | (13450,277000) |
 |   sample   |   full    |   sage   | cluster |     -     |    0.9036     |    793     | (14236,270000) |
 |   sample   |  sample   |   sage   | cluster |     -     |    0.8892     |    724     | (14236,270000) |
+
+
+
+
+
+## Aggr type
+
+dataset=flickr, sampler=rw-my
+
+| aggr_type | train_type | eval_type | norm  | Best f1-micro | Best epoch |
+| --------- | ---------- | --------- | ----- | ------------- | ---------- |
+| max       | full       | full      | -     | 0.5202        | 118        |
+| max       | sample     | full      | True  | 0.4371        | 1          |
+| max       | sample     | full      | False | 0.5249        | 25         |
+| add       | full       | full      | -     | 0.4658        | 46         |
+| add       | sample     | full      | True  | 0.4544        | 116        |
+| add       | sample     | full      | False | 0.4680        | 119        |
+| mean      | full       | full      | -     | 0.5211        | 114        |
+| mean      | sample     | full      | True  | 0.4611        | 5          |
+| mean      | sample     | full      | False | 0.5179        | 10         |
+
+
+
+dataset=ppi, sampler=rw-my
+
+| aggr_type | train_type | eval_type | norm  | Best f1-micro | Best epoch |
+| --------- | ---------- | --------- | ----- | ------------- | ---------- |
+| max       | full       | full      | -     | 0.8964        | 1494       |
+| max       | sample     | full      | True  | 0.3984        | 61         |
+| max       | sample     | full      | False | 0.9401        | 1398       |
+| add       | full       | full      | -     | 0.7120        | 1169       |
+| add       | sample     | full      | True  | 0.4882        | 1491       |
+| add       | sample     | full      | False | 0.8502        | 1491       |
+| mean      | full       | full      | -     | 0.8126        | 1497       |
+| mean      | sample     | full      | True  | 0.3686        | 0          |
+| mean      | sample     | full      | False | 0.8707        | 1482       |
 
 
 
