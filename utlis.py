@@ -6,6 +6,7 @@ from torch_geometric.data import GraphSAINTRandomWalkSampler, \
 from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 import torch.nn as nn
 from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
+from gecsampler import GECData, GECSampler
 
 
 def load_dataset(dataset='flickr'):
@@ -83,6 +84,12 @@ def build_sampler(args, data, save_dir):
         cluster_data = ClusterData(data, num_parts=args.num_parts, save_dir=save_dir)
         loader = ClusterLoader(cluster_data, batch_size=20, shuffle=True,
                                num_workers=0)
+    elif args.sampler == 'gec':
+        msg = 'Use graph embedding cluster sampler'
+        node_emb = GECData(args.dataset, save_dir=save_dir).load_node_embedding()
+        loader = GECSampler(data, node_emb,cluster_type=args.cluster_type,
+                            num_clusters=args.num_clusters,walk_length=args.walk_length,
+                            save_dir=save_dir)
     else:
         raise KeyError('Sampler type error')
 

@@ -18,7 +18,7 @@ def parse_args(config_path):
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--sampler', type=str, default='rw',
-                        choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster'])
+                        choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster', 'gec'])
     parser.add_argument('--gcn_type', type=str, default='sage', choices=['sage', 'gat'])
     parser.add_argument('--use_gpu', type=int, default=1, choices=[0, 1])
     parser.add_argument('--save_log', type=int, default=1, choices=[0, 1])
@@ -26,8 +26,11 @@ def parse_args(config_path):
     parser.add_argument('--log_interval', type=int, default=10)
     parser.add_argument('--self_loop', type=int, default=1, choices=[0, 1])
     parser.add_argument('--num_heads', type=int, default=1)
-    parser.add_argument('--num__parts', type=int, default=100)
+    parser.add_argument('--num_parts', type=int, default=100)
     parser.add_argument('--hidden_units', type=int, default=256)
+    parser.add_argument('--num_clusters', type=int, default=50)
+    parser.add_argument('--cluster_type', type=str)
+    parser.add_argument('--walk_length', type=int, default=0)
 
     args = parser.parse_args()
     if args.train_sample == 0:
