@@ -32,11 +32,11 @@ def test():
 
 
 @torch.no_grad()
-def save_results(path):
+def save_results(path,save_dir):
     model.eval()
     z = model(torch.arange(data.num_nodes, device=device))
     z = z.cpu().numpy()
-    np.save(path+'/flickr_ne.npy',z)
+    np.save(save_dir,z)
 
 
 if __name__ == '__main__':

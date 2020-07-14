@@ -55,7 +55,7 @@ def build_loss_op(args):
             return FixedBCEWithLogitsLoss(reduction='none')
 
 
-def build_sampler(args, data, save_dir):
+def build_sampler(args, data, save_dir, logging):
     if args.sampler == 'rw-my':
         msg = 'Use GraphSaint randomwalk sampler(mysaint sampler)'
         loader = MySAINTSampler(data, batch_size=args.batch_size, sample_type='random_walk',
@@ -86,10 +86,10 @@ def build_sampler(args, data, save_dir):
                                num_workers=0)
     elif args.sampler == 'gec':
         msg = 'Use graph embedding cluster sampler'
-        node_emb = GECData(args.dataset, save_dir=save_dir).load_node_embedding()
-        loader = GECSampler(data, node_emb,cluster_type=args.cluster_type,
-                            num_clusters=args.num_clusters,walk_length=args.walk_length,
-                            save_dir=save_dir)
+        node_emb = GECData(data, save_dir=save_dir, logging=logging).get_node_emb()
+        loader = GECSampler(data, node_emb, cluster_type=args.cluster_type,
+                            num_clusters=args.num_clusters, walk_length=args.walk_length,
+                            save_dir=save_dir, logging=logging)
     else:
         raise KeyError('Sampler type error')
 

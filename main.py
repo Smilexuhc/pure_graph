@@ -230,7 +230,7 @@ if __name__ == '__main__':
         val_nid = data.indices[data.val_mask].numpy()
         label_matrix = data.y.numpy()
 
-    loader, msg = build_sampler(args, data, dataset.processed_dir)
+    loader, msg = build_sampler(args, data, dataset.processed_dir,logging=logger.info)
     logger.info(msg)
 
     if args.use_gpu == 1:

@@ -29,7 +29,7 @@ def parse_args(config_path):
     parser.add_argument('--num_parts', type=int, default=100)
     parser.add_argument('--hidden_units', type=int, default=256)
     parser.add_argument('--num_clusters', type=int, default=50)
-    parser.add_argument('--cluster_type', type=str)
+    parser.add_argument('--cluster_type', type=str, default='kmeans')
     parser.add_argument('--walk_length', type=int, default=0)
 
     args = parser.parse_args()
