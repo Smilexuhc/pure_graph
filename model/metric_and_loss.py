@@ -25,7 +25,7 @@ class NormBCEWithLogitsLoss(object):
 
 
 class FixedBCEWithLogitsLoss(object):
-    def __init__(self,reduction='none'):
+    def __init__(self, reduction='none'):
         self.loss_op = nn.BCEWithLogitsLoss(reduction=reduction)
 
     def __call__(self, out, data):

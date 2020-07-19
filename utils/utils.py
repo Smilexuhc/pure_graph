@@ -2,11 +2,11 @@ import os.path as osp
 from torch_geometric.datasets import Flickr, Reddit, Yelp
 from dataset import PPI
 from torch_geometric.data import GraphSAINTRandomWalkSampler, \
-    NeighborSampler, GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
-from sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
+    GraphSAINTNodeSampler, GraphSAINTEdgeSampler, ClusterData, ClusterLoader
+from sampler.saint_sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, MySAINTSampler
 import torch.nn as nn
-from metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
-from gecsampler import GECData, GECSampler
+from model.metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
+from sampler.gecsampler import GECData, GECSampler
 
 
 def load_dataset(dataset='flickr'):

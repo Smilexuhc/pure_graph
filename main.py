@@ -1,14 +1,12 @@
 from parse_args import parse_args, get_log_name
 import torch
-from torch_geometric.utils import degree, contains_self_loops, add_self_loops, remove_self_loops
+from torch_geometric.utils import degree
 import numpy as np
-from nets import SAGENet, GATNet
+from model.nets import SAGENet, GATNet
 from logger import LightLogging
 from sklearn.metrics import accuracy_score, f1_score
-import tensorboardX
-from utlis import load_dataset, build_loss_op, build_sampler
+from utils.utils import load_dataset, build_loss_op, build_sampler
 import pandas as pd
-from time import time
 
 log_path = './logs'
 summary_path = './summary'

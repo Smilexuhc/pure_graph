@@ -73,8 +73,8 @@ class GECData(object):
                                        optimizer,
                                        loader,
                                        device)
-            #acc = self.__test_step__(model, data)
-            #logging(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
+            # acc = self.__test_step__(model, data)
+            # logging(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
             logging(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
 
         self.__save_results__(model, data, device, self._file_path)
@@ -85,8 +85,20 @@ class GECData(object):
 
 
 class GECSampler(object):
-    def __init__(self, data, node_emb, num_clusters=25, cluster_type='kmeans', walk_length=1, save_dir=None,
-                 logging=print):
+    def __init__(self, data, node_emb, num_clusters=25, cluster_type='kmeans', min_nodes='auto', walk_length=0,
+                 save_dir=None, logging=print):
+        """
+
+        Args:
+            data:
+            node_emb:
+            num_clusters:
+            cluster_type:
+            min_nodes(int): min nodes for a sub graph
+            walk_length:
+            save_dir:
+            logging:
+        """
         assert data.edge_index is not None
         assert 'node_norm' not in data
         assert 'edge_norm' not in data
@@ -101,6 +113,11 @@ class GECSampler(object):
         self._N = N = data.num_nodes
         self._E = data.num_edges
         self._walk_length = walk_length
+        if min_nodes == 'auto':
+            self._min_nodes = N // num_clusters
+        else:
+            self._min_nodes = min_nodes
+
         self._adj = SparseTensor(row=data.edge_index[0], col=data.edge_index[1],
                                  value=data.edge_attr, sparse_sizes=(N, N))
 
@@ -160,18 +177,35 @@ class GECSampler(object):
         # data.res_n_id = res_n_id
         return data
 
+    # def __sample_nodes__(self):
+    #     clusters = np.random.permutation(self._num_clusters)  # for shuffle
+    #     all_nodes = np.arange(self._N)
+    #     sample_nodes_list = []
+    #     for i in clusters:
+    #         init_nid = torch.from_numpy(all_nodes[self._cluster_labels == i])
+    #         if self._walk_length:
+    #             nid = self._adj.random_walk(init_nid, self._walk_length)
+    #             nid = nid.flatten().unique()
+    #         else:
+    #             nid = init_nid
+    #             # res_nid = torch.arange(nid.size(0), dtype=torch.long)
+    #         sample_nodes_list.append(nid)
+    #     return sample_nodes_list
+
     def __sample_nodes__(self):
-        clusters = np.random.permutation(self._num_clusters)  # for shuffle
+        clusters = np.random.permutation(self._num_clusters)
         all_nodes = np.arange(self._N)
         sample_nodes_list = []
         for i in clusters:
+
             init_nid = torch.from_numpy(all_nodes[self._cluster_labels == i])
-            if self._walk_length:
-                nid = self._adj.random_walk(init_nid, self._walk_length)
+            num_nodes = init_nid.size()[0]
+            if num_nodes < self._min_nodes and self._min_nodes != 0:
+                walk_length = self._min_nodes // num_nodes
+                nid = self._adj.random_walk(init_nid, walk_length)
                 nid = nid.flatten().unique()
             else:
                 nid = init_nid
-                # res_nid = torch.arange(nid.size(0), dtype=torch.long)
             sample_nodes_list.append(nid)
         return sample_nodes_list
 
@@ -186,3 +220,7 @@ class GECSampler(object):
         for sub_graph in self.__sample_graph__():
             data = self.__get_data_from_sample(sub_graph)
             yield data
+
+
+
+

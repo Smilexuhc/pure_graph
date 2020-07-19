@@ -1,9 +1,9 @@
 from openTSNE import TSNE
 from openTSNE.callbacks import ErrorLogger
-from plot_utils import plot
+from utils.utils import plot
 import numpy as np
 import os.path as osp
-from utlis import load_dataset
+from utils.utils import load_dataset
 
 
 def plot_graphs(node_emb, label):

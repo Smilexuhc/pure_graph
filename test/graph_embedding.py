@@ -1,10 +1,8 @@
 import os.path as osp
 
 import torch
-import matplotlib.pyplot as plt
-from sklearn.manifold import TSNE
 from torch_geometric.nn import Node2Vec
-from utlis import load_dataset
+from utils.utils import load_dataset
 import numpy as np
 from logger import LightLogging
 
