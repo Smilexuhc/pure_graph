@@ -68,14 +68,14 @@ class GECData(object):
         loader = model.loader(batch_size=128, shuffle=True, num_workers=4)
 
         optimizer = torch.optim.SparseAdam(model.parameters(), lr=0.01)
-        for epoch in range(1, 30):
+        for epoch in range(30):
             loss = self.__train_step__(model,
                                        optimizer,
                                        loader,
                                        device)
             # acc = self.__test_step__(model, data)
             # logging(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
-            logging(f'Epoch: {epoch:02d}, Loss: {loss:.4f}')
+            logging(f'Epoch-{epoch:02d}, Loss: {loss:.4f}')
 
         self.__save_results__(model, data, device, self._file_path)
         logging('Save node embedding to: {}'.format(self._file_path))
