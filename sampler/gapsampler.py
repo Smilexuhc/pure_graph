@@ -6,6 +6,7 @@ import os.path as osp
 from torch_geometric.utils import degree
 import numpy as np
 from torch_sparse import SparseTensor, rw, saint
+import copy
 
 
 # def to_sparsetensor(edge_index, num_nodes):
@@ -77,20 +78,27 @@ class GAPSampler(object):
             device = torch.device('cpu')
 
         self._input_dim = node_emb.shape[1]
+        self._data = copy.copy(data)
         self._N = N = data.num_nodes
+        self._E = data.num_edges
         self._adj = SparseTensor(row=data.edge_index[0], col=data.edge_index[1],
                                  value=data.edge_attr, sparse_sizes=(N, N))
         self._file_path = osp.join(save_dir or '', self.__filename__)
 
         if save_dir is not None and osp.exists(self._file_path):
             logging('Load saved gap results from {}.'.format(self._file_path))
+            self._part_labels = np.load(self._file_path)
         else:
             logging('Train gap graph partition model: ')
-            self.__train__(data, node_emb, device, logging)
+            self._part_labels = self.__train__(data, node_emb, device, logging)
+            np.save(self._file_path,self._part_labels)
 
     @property
     def __filename__(self):
         return f'{self.__class__.__name__.lower()}_{self._num_parts}.npy'
+
+    def __len__(self):
+        return self._num_parts
 
     def __train_step__(self, model, optimizer, loader, loss_fn, device):
         model.train()
@@ -107,13 +115,13 @@ class GAPSampler(object):
         return total_loss / len(loader)
 
     @torch.no_grad()
-    def __save_results__(self, model, x, device, save_dir):
+    def __predict__(self, model, x, device, save_dir):
         # TODO: full data inference
         model.eval()
         out = model(x.to(device))
         pred = out.argmax(dim=-1)
         pred = pred.cpu().numpy()
-        np.save(save_dir, pred)
+        return pred
 
     def __train__(self, data, x, device, logging):
 
@@ -131,14 +139,59 @@ class GAPSampler(object):
         dataset = TensorDataset(x, all_nodes, degrees)
         data_loader = DataLoader(dataset, batch_size=1024, shuffle=True)
 
-        for epoch in range(100):
+        for epoch in range(50):
             loss = self.__train_step__(model,
                                        optimizer,
                                        data_loader,
                                        loss_fn,
                                        device)
             logging(f'Epoch-{epoch:02d}, Loss: {loss:.4f}')
-        self.__save_results__(model, x, device, self._file_path)
+        return self.__predict__(model, x, device, self._file_path)
+
+    def __get_data_from_sample(self, sample):
+        nid, adj, eid = sample
+        data = self._data.__class__()
+        data.num_nodes = nid.size(0)
+        row, col, value = adj.coo()
+        data.edge_index = torch.stack([row, col], dim=0)
+        data.edge_attr = value
+
+        for key, item in self._data:
+            if item.size(0) == self._N:
+                data[key] = item[nid]
+            elif item.size(0) == self._E:
+                data[key] = item[eid]
+            elif key == 'edge_index':
+                pass
+            else:
+                data[key] = item
+
+        data.n_id = nid
+        # data.res_n_id = res_n_id
+        return data
+
+    def __sample_nodes__(self):
+        clusters = np.random.permutation(self._num_parts)  # for shuffle
+        all_nodes = np.arange(self._N)
+        sample_nodes_list = []
+        for i in clusters:
+            init_nid = torch.from_numpy(all_nodes[self._part_labels == i])
+            nid = init_nid
+            # res_nid = torch.arange(nid.size(0), dtype=torch.long)
+            sample_nodes_list.append(nid)
+        return sample_nodes_list
+
+    def __sample_graph__(self):
+        sample_graph_list = []
+        for nid in self.__sample_nodes__():
+            adj, eid = self._adj.saint_subgraph(nid)
+            sample_graph_list.append((nid, adj, eid))
+        return sample_graph_list
+
+    def __iter__(self):
+        for sub_graph in self.__sample_graph__():
+            data = self.__get_data_from_sample(sub_graph)
+            yield data
 
 
 class GAPCutLoss(nn.Module):
@@ -170,7 +223,6 @@ class GAPCutLoss(nn.Module):
 
         error_partition = error_partition.squeeze(dim=0)
         error_partition = ((error_partition - batch_size / self.num_parts) ** 2).sum()
-        #print((error_cut, error_partition))
         return error_cut + error_partition
 
 # class GAPCutLoss(torch.autograd.Function):

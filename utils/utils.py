@@ -7,6 +7,7 @@ from sampler.saint_sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, 
 import torch.nn as nn
 from model.metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
 from sampler.gecsampler import GECData, GECSampler
+from sampler.gapsampler import GAPSampler
 import os
 
 
@@ -91,6 +92,10 @@ def build_sampler(args, data, save_dir, logging):
         loader = GECSampler(data, node_emb, cluster_type=args.cluster_type,
                             num_clusters=args.num_clusters, walk_length=args.walk_length,
                             save_dir=save_dir, logging=logging)
+    elif args.sampler == 'gap':
+        msg = 'Use gap sampler'
+        node_emb = GECData(data, save_dir=save_dir, logging=logging).get_node_emb()
+        loader = GAPSampler(data, node_emb,num_parts=args.num_parts,save_dir=save_dir)
     else:
         raise KeyError('Sampler type error')
 

@@ -18,7 +18,7 @@ def parse_args(config_path):
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--batch_size', type=int)
     parser.add_argument('--sampler', type=str, default='rw',
-                        choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster', 'gec'])
+                        choices=['rw-my', 'rw', 'ns', 'node-my', 'edge', 'node', 'cluster', 'gec', 'gap'])
     parser.add_argument('--gcn_type', type=str, default='sage', choices=['sage', 'gat'])
     parser.add_argument('--use_gpu', type=int, default=1, choices=[0, 1])
     parser.add_argument('--save_log', type=int, default=1, choices=[0, 1])
