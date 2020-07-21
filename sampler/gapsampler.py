@@ -3,8 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 import os.path as osp
-from torch_geometric.utils import subgraph, degree
+from torch_geometric.utils import subgraph, degree, to_dense_adj
 import numpy as np
+
+
+def to_sparsetensor(edge_index, num_nodes):
+    row, col = edge_index
+    indices = torch.stack([row, col], dim=0)
+    values = torch.ones(row.size(0))
+    return torch.sparse.LongTensor(indices, values, torch.Size([num_nodes, num_nodes]))
 
 
 class PartitionClassifier(nn.Module):
@@ -28,40 +35,43 @@ class PartitionClassifier(nn.Module):
 
 
 class GAPSampler(object):
-    def __init__(self,data, node_emb, num_parts=25, use_gpu=1, save_dir=None, logging=print):
+    def __init__(self, data, node_emb, num_parts=25, use_gpu=1, save_dir=None, logging=print):
         self._num_parts = num_parts
         self.logging = logging
         if use_gpu == 1:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
             device = torch.device('cpu')
-        self._input_dim = node_emb.size()[1]
+        self._input_dim = node_emb.size(1)
+        self._N = data.num_nodes
         self._file_path = osp.join(save_dir or '', self.__filename__)
+
         if save_dir is not None and osp.exists(self._file_path):
             logging('Load saved gap results from {}.'.format(self._file_path))
         else:
             logging('Train gap graph partition model: ')
-            self.__train__(data,node_emb, device, logging)
+            self.__train__(data, node_emb, device, logging)
 
     @property
     def __filename__(self):
         return f'{self.__class__.__name__.lower()}_{self._num_parts}.npy'
 
-    def __train_step__(self, model, A,optimizer, loader, loss_fn, device):
+    def __train_step__(self, model, A, optimizer, loader, loss_fn, device):
         model.train()
         total_loss = 0
-        for x_batch,nids,d_batch in loader:
+        for x_batch, nids, d_batch in loader:
             optimizer.zero_grad()
             pred = model(x_batch.to(device))
-            A_batch,_ = subgraph(nids,A,num_nodes=)
-            loss = loss_fn(pred,A_batch,d_batch)
+            A_batch, _ = subgraph(nids, A, num_nodes=self._N)
+            A_batch = to_dense_adj(A_batch)
+            loss = loss_fn(pred, A_batch, d_batch)
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
         return total_loss / len(loader)
 
     @torch.no_grad()
-    def __save_results__(self, model,x,device,save_dir):
+    def __save_results__(self, model, x, device, save_dir):
         # TODO: full data inference
         model.eval()
         out = model(x.to(device))
@@ -69,22 +79,21 @@ class GAPSampler(object):
         pred = pred.cpu().numpy()
         np.save(save_dir, pred)
 
-
-    def __train__(self,data,x, device, logging):
+    def __train__(self, data, x, device, logging):
 
         model = PartitionClassifier(self._input_dim, self._num_parts)
         optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, )
 
         mean_nodes = data.num_nodes / self._num_parts
         loss_fn = GAPCutLoss(mean_nodes)
-        out_degrees = degree(data.edge_index[0],num_nodes=data.num_nodes)
-        in_degrees = degree(data.edge_index[1],num_nodes=data.num_nodes)
-        degrees = (in_degrees+out_degrees)/2
-        all_nodes = torch.arange(data.num_nodes)
+        out_degrees = degree(data.edge_index[0], num_nodes=self._N)
+        in_degrees = degree(data.edge_index[1], num_nodes=self._N)
+        degrees = (in_degrees + out_degrees) / 2
+        all_nodes = torch.arange(self._N)
         x = torch.from_numpy(x)
-        dataset = TensorDataset(x,all_nodes,degrees)
+        dataset = TensorDataset(x, all_nodes, degrees)
 
-        data_loader = DataLoader(dataset, batch_size=256, shuffle=True)
+        data_loader = DataLoader(dataset, batch_size=1024, shuffle=True)
         for epoch in range(30):
             loss = self.__train_step__(model,
                                        data.edge_index,
@@ -93,14 +102,15 @@ class GAPSampler(object):
                                        loss_fn,
                                        device)
             logging(f'Epoch-{epoch:02d}, Loss: {loss:.4f}')
-        self.__save_results__(model,x,device,self._file_path)
+        self.__save_results__(model, x, device, self._file_path)
+
 
 class GAPCutLoss(nn.Module):
-    def __init__(self,mean_nodes):
+    def __init__(self, mean_nodes):
         super(GAPCutLoss).__init__()
         self.mean_nodes = mean_nodes
 
-    def forward(self,Y,A,degree):
+    def forward(self, Y, A, degree):
         """
         Upper means mat, lower means vec.
         Args:
@@ -111,16 +121,17 @@ class GAPCutLoss(nn.Module):
         Returns:
 
         """
-        gamma = torch.mm(Y.t,degree)
+
+        gamma = torch.mm(Y.t, degree)
         # todo sparse element wise
-        error_cut = torch.mul(torch.mm(torch.div(Y,gamma),(1-Y.T)),A).sum()
+        error_cut = torch.mm(torch.div(Y, gamma), (1 - Y.T))
+        error_cut = torch.mul(error_cut, A).sum()
 
-        error_partition = torch.mm(torch.ones((1,degree.size())),Y)
+        error_partition = torch.mm(torch.ones((1, degree.size(0))), Y)
         error_partition = error_partition.squeeze(dim=0)
-        error_partition = (error_partition-self.mean_nodes).square().sum()
+        error_partition = (error_partition - self.mean_nodes).square().sum()
 
-        return error_cut+error_partition
-
+        return error_cut + error_partition
 
 # class GAPCutLoss(torch.autograd.Function):
 #     '''
