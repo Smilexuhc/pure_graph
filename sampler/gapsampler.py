@@ -16,7 +16,7 @@ def to_sparsetensor(edge_index, num_nodes):
 
 class PartitionClassifier(nn.Module):
     def __init__(self, input_dim, num_parts):
-        super(PartitionClassifier).__init__()
+        super(PartitionClassifier, self).__init__()
         self.input_dim = input_dim
         self.num_parts = num_parts
         self.linear_1 = nn.Linear(input_dim, 64)
@@ -42,7 +42,8 @@ class GAPSampler(object):
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         else:
             device = torch.device('cpu')
-        self._input_dim = node_emb.size(1)
+
+        self._input_dim = node_emb.shape[1]
         self._N = data.num_nodes
         self._file_path = osp.join(save_dir or '', self.__filename__)
 
@@ -107,27 +108,28 @@ class GAPSampler(object):
 
 class GAPCutLoss(nn.Module):
     def __init__(self, mean_nodes):
-        super(GAPCutLoss).__init__()
+        super(GAPCutLoss,self).__init__()
         self.mean_nodes = mean_nodes
 
-    def forward(self, Y, A, degree):
+    def forward(self, Y, A, d):
         """
         Upper means mat, lower means vec.
         Args:
-            Y(Tensor):
-            A:
-            degree:
+            Y: probability that node belong to each partition [batch_size,num_parts]
+            A: batch adjacent matrix  [batch_size, batch_size]
+            d: batch degree vector [batch_size]
 
         Returns:
+            scalar
 
         """
 
-        gamma = torch.mm(Y.t, degree)
+        gamma = torch.mm(Y.t, d)
         # todo sparse element wise
         error_cut = torch.mm(torch.div(Y, gamma), (1 - Y.T))
         error_cut = torch.mul(error_cut, A).sum()
 
-        error_partition = torch.mm(torch.ones((1, degree.size(0))), Y)
+        error_partition = torch.mm(torch.ones((1, d.size(0))), Y)
         error_partition = error_partition.squeeze(dim=0)
         error_partition = (error_partition - self.mean_nodes).square().sum()
 

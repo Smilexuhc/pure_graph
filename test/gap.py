@@ -1,11 +1,12 @@
 import torch
 from torch_sparse import SparseTensor
 from torch_geometric.utils import to_scipy_sparse_matrix
+from sampler.gapsampler import GAPSampler
+from sampler.gecsampler import GECData
 
-torch.st
+from utils.utils import load_dataset
 
-row, col = edge_index.cpu()
-edge_attr = torch.ones(row.size(0))
-
-torch.sparse.LongTensor((edge_attr, (row, col)), (N, N))
-
+dataset = load_dataset('ppi')
+data = dataset[0]
+node_emb = GECData(data, save_dir=dataset.processed_dir, logging=print).get_node_emb()
+sampler = GAPSampler(data, node_emb, save_dir=dataset.processed_dir)

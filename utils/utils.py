@@ -7,6 +7,7 @@ from sampler.saint_sampler import GraphSAINTNodeSampler, GraphSAINTEdgeSampler, 
 import torch.nn as nn
 from model.metric_and_loss import NormCrossEntropyLoss, NormBCEWithLogitsLoss, FixedBCEWithLogitsLoss
 from sampler.gecsampler import GECData, GECSampler
+import os
 
 
 def load_dataset(dataset='flickr'):
@@ -20,7 +21,7 @@ def load_dataset(dataset='flickr'):
     Returns:
         dataset
     """
-    path = osp.join(osp.dirname(osp.realpath(__file__)), 'data', dataset)
+    path = osp.join(os.getcwd(), 'data', dataset)
     if dataset == 'flickr':
         dataset = Flickr(path)
 
